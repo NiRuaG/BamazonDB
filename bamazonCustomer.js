@@ -12,24 +12,49 @@ const connection = mysql.createConnection({
   host: "localhost",
   port: 3306,
 
-  user: keys.mysql.user,
-  password: keys.mysql.pw,
-  
+  user    : keys.mysql.user,
+  password: keys.mysql.pw  ,
+
   database: "bamazon"
 });
 
-// #region START OF EXECUTION
-connection.connect(function(err) {
-  if (err) { throw err };
-  // console.log("Connected to mysql db as id " + connection.threadId);
-  afterConnection();
-});
-
 function afterConnection() {
-  connection.query("SELECT * FROM products", function(err, res) {
-    if (err) throw err;
-    console.log(res);
-    connection.end();
+  const queryFields = ['item_id', 'product_name', 'price'];
+  connection.query({
+    sql: 'SELECT ?? FROM `products`',
+  }, 
+  [queryFields],
+
+  function(error, res) {
+    if (error) { 
+      console.log("Query error: ", error.code);
+      return;
+    };
+
+    if (Array.isArray(res) && res.length === 0) {
+      console.log("Sorry, query returned no results.");
+      return;
+    }
+
+    res.forEach(record => {
+      console.log(record);
+    });
+
   });
 }
+
+// #region START OF EXECUTION
+connection.connect(function(err) {
+  if (err) { 
+    console.log("Connection error: ", err.code);
+    return;
+  };
+  // console.log("Connected to mysql db as id " + connection.threadId);
+  try {
+    afterConnection();
+  }
+  finally {
+    connection.end();
+  }
+});
 // #endregion START OF EXECUTION

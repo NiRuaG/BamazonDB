@@ -1,10 +1,10 @@
 USE bamazon;
 
--- DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS products;
 
 CREATE TABLE products (
   -- * unique id for each product -- 
-  `item_id` CHAR(6) NOT NULL, 
+  `item_id` INT UNSIGNED NOT NULL AUTO_INCREMENT, 
 
   -- * Name of product --
   `product_name` VARCHAR(64) NOT NULL,
@@ -18,5 +18,5 @@ CREATE TABLE products (
   -- * how much of the product is available in stores --
   `stock_quantity` INT UNSIGNED NOT NULL,
 
-  UNIQUE (`item_id`)
+  PRIMARY KEY (`item_id`)
 );

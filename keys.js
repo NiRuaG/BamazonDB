@@ -1,4 +1,4 @@
-console.log('keys.js is loaded');
+// console.log('keys.js is loaded');
 
 exports.mysql = {
   user: process.env.MYSQL_USER,
