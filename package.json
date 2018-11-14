@@ -4,6 +4,7 @@
   "description": "Storefront Database",
   "main": "bamazonCustomer.js",
   "dependencies": {
+    "ansi-colors": "^3.2.1",
     "chalk": "^2.4.1",
     "dotenv": "^6.1.0",
     "inquirer": "^6.2.0",

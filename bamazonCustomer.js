@@ -1,9 +1,10 @@
 //#region NPM
 require('dotenv').config();
 const mysql = require('mysql');
-const chalk = require('chalk');
+const colors = require('ansi-colors');
 const createStream = require('table').createStream;
 const inquirer = require('inquirer');
+const chalk = require('chalk');
 //#endregion
 
 //#region LOCAL Modules
@@ -67,40 +68,41 @@ function afterConnection() {
         }
       });
 
+      // Headers
       stream.write([
-        chalk.white.bgBlue(`${"ID ".padStart(MAX_ID_LENGTH)}`), 
-        chalk.white.bgBlue(`${"  Product Name".padEnd(20)}`), 
-        chalk.white.bgBlue(`${"Price ".padStart(MAX_PRICE_LENGTH+2)}`)
+        colors.bold(`${colors.green(`${"ID ".padStart(MAX_ID_LENGTH)}`)}`), 
+        colors.bold(`${"  Product Name".padEnd(20)}`), 
+        colors.bold(`${"Price ".padStart(MAX_PRICE_LENGTH+2)}`)
       ]);
-
+      
       results.forEach((record, index) => {
         // console.log(record);
         let oddIndexRow = index&1;
         stream.write([
           oddIndexRow ? 
-              chalk.blue(record.item_id) 
+            colors.green(record.item_id) 
                        : record.item_id,
           oddIndexRow ? 
-              chalk.blue(record.product_name) 
+            colors.green(record.product_name) 
                        : record.product_name,
           oddIndexRow ? 
-            chalk.blue(`$ ${record.price.toFixed(2).padStart(MAX_PRICE_LENGTH)}`) 
-                     : `$ ${record.price.toFixed(2).padStart(MAX_PRICE_LENGTH)}`,
+            colors.green(`$ ${record.price.toFixed(2).padStart(MAX_PRICE_LENGTH)}`) 
+                       : `$ ${record.price.toFixed(2).padStart(MAX_PRICE_LENGTH)}`,
         ]);
       });
+      console.log(); // stream needs a new line when complete
 
-      
+      inquirer.prompt([
+        {
+          name: "productID",
+          message: `Please enter the ${colors.green('ID')} of the product you wish to buy:`,
+        }  
+      ])
+      .then(function(answers) {
+
+      });
     });
 }
-
-/**
- * @typedef {Object} table~columns
- * @property {string} alignment Cell content alignment (enum: left, center, right) (default: left).
- * @property {number} width Column width (default: auto).
- * @property {number} truncate Number of characters are which the content will be truncated (default: Infinity).
- * @property {number} paddingLeft Cell content padding width left (default: 1).
- * @property {number} paddingRight Cell content padding width right (default: 1).
- */
 
 // #region START OF EXECUTION
 connection.connect(function(err) {
