@@ -1,10 +1,9 @@
 //#region NPM
 require('dotenv').config();
-const mysql = require('mysql');
-const colors = require('ansi-colors');
+const mysql        = require('mysql');
+const colors       = require('ansi-colors');
 const createStream = require('table').createStream;
-const inquirer = require('inquirer');
-const chalk = require('chalk');
+const inquirer     = require('inquirer');
 //#endregion
 
 //#region LOCAL Modules
@@ -45,6 +44,19 @@ function afterConnection() {
         return;
       }
 
+      let   idArr = [];
+      let restArr = [];
+      results.forEach( record => {
+            idArr.push(record.item_id);
+          restArr.push([
+            record.product_name,
+            record.price
+        ]);
+        // console.log(record);
+        // return Array.from(record);
+      });
+      console.log(idArr, restArr);
+
       let stream = createStream({
         columnDefault: { width: 12 },
         columnCount: 3,
@@ -59,7 +71,7 @@ function afterConnection() {
             alignment   : 'left' , 
             paddingLeft : 2,
             paddingRight: 1,
-            //! wrapWord    : true, //!problem with package
+            // wrapWord    : true, //!problem with package
             truncate    : 64 },
           2: { 
             width       : MAX_PRICE_LENGTH+2, 
@@ -70,9 +82,9 @@ function afterConnection() {
 
       // Headers
       stream.write([
-        colors.bold(`${colors.green(`${"ID ".padStart(MAX_ID_LENGTH)}`)}`), 
-        colors.bold(`${"  Product Name".padEnd(20)}`), 
-        colors.bold(`${"Price ".padStart(MAX_PRICE_LENGTH+2)}`)
+        colors.black.bgGreen(`${"ID ".padStart(MAX_ID_LENGTH)}`), 
+        colors.black.bgGreen(`${"  Product Name".padEnd(20)}`), 
+        colors.black.bgGreen(`${"Price ".padStart(MAX_PRICE_LENGTH+2)}`)
       ]);
       
       results.forEach((record, index) => {
@@ -96,7 +108,17 @@ function afterConnection() {
         {
           name: "productID",
           message: `Please enter the ${colors.green('ID')} of the product you wish to buy:`,
-        }  
+          validate: checkID => {
+            return idArr.includes(+checkID) || "No product known by that ID.";
+          }
+        },
+        {
+          name: "quantity",
+          message: `How many would you like to buy: `,
+          validate: checkQty => {
+            return (!Number.isNaN(checkQty) && +checkQty > 0 && Number.isInteger(+checkQty)) || "Quantity needs to be a positive whole number.";
+          }
+        }
       ])
       .then(function(answers) {
 
@@ -105,9 +127,9 @@ function afterConnection() {
 }
 
 // #region START OF EXECUTION
-connection.connect(function(err) {
-  if (err) { 
-    console.log("Connection error: ", err.code);
+connection.connect(function(error) {
+  if (error) { 
+    console.log("Connection error: ", error.code);
     return;
   };
   // console.log("Connected to mysql db as id " + connection.threadId);
