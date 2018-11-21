@@ -26,6 +26,8 @@ const MAX_ID = 999999;
 const MAX_ID_LENGTH = MAX_ID.toString().length;
 const MAX_PRICE = 9999.99;
 const MAX_PRICE_LENGTH = MAX_PRICE.toString().length;
+const MAX_STOCK_QTY = 999;
+const MAX_STOCK_QTY_LENGTH = Math.max("In Stock".length, MAX_STOCK_QTY.toString().length);
 
 const queryPromise = queryObj =>
   new Promise(function (resolve, reject) {
@@ -78,7 +80,7 @@ async function afterConnection() {
   // #region DISPLAY TABLE
   let stream = createStream({
     columnDefault: { width: 12 },
-    columnCount: 3,
+    columnCount: 4,
     columns: {
       0: { 
         width       : MAX_ID_LENGTH, 
@@ -87,7 +89,7 @@ async function afterConnection() {
         paddingRight: 1 },
       1: { 
         width       : 20, 
-        alignment   : 'left' , 
+        alignment   : 'left', 
         paddingLeft : 2,
         paddingRight: 1,
         // wrapWord    : true, //!problem with table package & colors
@@ -96,6 +98,10 @@ async function afterConnection() {
         width       : MAX_PRICE_LENGTH+2, 
         alignment   : 'right', 
         paddingLeft : 1 },
+      3: {
+        width       : MAX_STOCK_QTY_LENGTH,
+        alignment   : 'right',
+        paddingLeft : 1 }
     }
   });
 
@@ -103,23 +109,21 @@ async function afterConnection() {
   stream.write([
     colors.black.bgGreen(`${"ID ".padStart(MAX_ID_LENGTH)}`), 
     colors.black.bgGreen(`${"  Product Name".padEnd(20)}`), 
-    colors.black.bgGreen(`${"Price ".padStart(MAX_PRICE_LENGTH+2)}`)
+    colors.black.bgGreen(`${"Price "  .padStart(MAX_PRICE_LENGTH+2)}`),
+    colors.black.bgGreen(`${"In Stock".padStart(MAX_STOCK_QTY_LENGTH)}`),
   ]);
   
   products.forEach((record, index) => {
     // console.log(record);
-    let oddIndexRow = index&1;
-    stream.write([
-      oddIndexRow ? 
-        colors.green(record.item_id) 
-                   : record.item_id,
-      oddIndexRow ? 
-        colors.green(record.product_name) 
-                    : record.product_name,
-      oddIndexRow ? 
-        colors.green(`$ ${record.price.toFixed(2).padStart(MAX_PRICE_LENGTH)}`) 
-                   : `$ ${record.price.toFixed(2).padStart(MAX_PRICE_LENGTH)}`,
-    ]);
+    let datarow = [
+      record.item_id, 
+      record.product_name, 
+      `$${record.price.toFixed(2).padStart(MAX_PRICE_LENGTH)}`,
+      record.stock_quantity
+    ];
+    // apply color to every-other row
+    if (index&1) { datarow = datarow.map(colors.green) };
+    stream.write(datarow);
   });
   console.log(); // stream needs a new line when complete
   // #endregion DISPLAY TABLE
