@@ -35,7 +35,7 @@ for (let c of Object.values(TBL_CONST)) {
 
 const queryPromise = queryObj =>
   new Promise(function (resolve, reject) {
-    let query = connection.query(queryObj, function(error, results, fields) {
+    const query = connection.query(queryObj, function(error, results, fields) {
       if (error) { return reject(error); }
       resolve(
         {
@@ -62,7 +62,7 @@ const query_UpdateProduct = (updateQueryObj) =>
 // #endregion Query Promises
 
 function displayTable(products) {
-  let stream = createStream({
+  const stream = createStream({
     columnDefault: { width: 12 },
     columnCount: 4,
     columns: {
@@ -117,6 +117,8 @@ function displayTable(products) {
 
 
 async function afterConnection() {
+  console.log(`\nWelcome to ${colors.green('BAMazon')}!\nThe below items are in stock and available for purchase.`);
+
   //*        QUERY - ALL PRODUCTS
   // #region QUERY - ALL PRODUCTS
   let products;
@@ -139,7 +141,7 @@ async function afterConnection() {
 
   //*        PROMPT USER for Product & Quantity
   // #region PROMPT USER
-  let prodIDInput = (await inquirer.prompt([
+  const prodIDInput = (await inquirer.prompt([
     {
       name: "productID",
       message: `Please enter the ${colors.green('ID')} of the product you wish to buy (or 'exit')):`,
@@ -156,7 +158,7 @@ async function afterConnection() {
   const theProduct = products[prodIDs.indexOf(Number(prodIDInput))];
   const stockQty = theProduct.stock_quantity;
 
-  let qtyInput = (await inquirer.prompt([
+  const qtyInput = (await inquirer.prompt([
     {
       name: "quantity",
       message: `How ${colors.green('many')} would you like to buy (0 to cancel order): `,
@@ -219,7 +221,6 @@ connection.connect(async function(error) {
     return;
   };
   // console.log("Connected to mysql db as id " + connection.threadId);
-  console.log(`\nWelcome to ${colors.green('BAMazon')}!\nThe below items are in stock and available for purchase.`);
   try {
     await afterConnection();
   } catch(err) {
