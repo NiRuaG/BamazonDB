@@ -2,7 +2,7 @@
 require('dotenv').config();
 const mysql        = require('mysql');
 const colors       = require('ansi-colors');
-const table        = require('table').table;
+//// const table        = require('table').table;
 const createStream = require('table').createStream;
 const inquirer     = require('inquirer');
 //#endregion
@@ -22,16 +22,20 @@ const connection = mysql.createConnection({
   database: "bamazon"
 });
 
-const MAX_ID = 999999;
-const MAX_ID_LENGTH = MAX_ID.toString().length;
-const MAX_PRICE = 9999.99;
-const MAX_PRICE_LENGTH = MAX_PRICE.toString().length;
-const MAX_STOCK_QTY = 999;
-const MAX_STOCK_QTY_LENGTH = Math.max("In Stock".length, MAX_STOCK_QTY.toString().length);
+const TBL_CONST = {
+  ID   : { header: " ID "           , max: 999999    },
+  PRICE: { header: " Price "        , max:   9999.99 },
+  STOCK: { header: " Stock "        , max:    999    },
+
+  PROD : { header: "  Product Name ", width: 20 },
+};
+for (let c of Object.values(TBL_CONST)) {
+  c.width = c.width || Math.max(c.header.length, c.max.toString().length);
+}
 
 const queryPromise = queryObj =>
   new Promise(function (resolve, reject) {
-    let query = connection.query(queryObj, function (error, results, fields) {
+    let query = connection.query(queryObj, function(error, results, fields) {
       if (error) { return reject(error); }
       resolve(
         {
@@ -42,19 +46,74 @@ const queryPromise = queryObj =>
     });
   });
 
-
-const getAllProducts = () =>
+// #region Query Promises
+const query_AllProductsInStock = () =>
   queryPromise({
-    sql: 'SELECT * FROM `products`',
+    sql: 'SELECT * FROM `products` WHERE `stock_quantity` > 0',
   });
 
-const updateProduct = (updateQueryObj) =>
+const query_UpdateProduct = (updateQueryObj) =>
   queryPromise({
-    sql: "UPDATE `products` SET ? WHERE ?",
+      sql: "UPDATE `products` SET ? WHERE ?",
     values: [
       updateQueryObj.set, updateQueryObj.where
     ]
   });
+// #endregion Query Promises
+
+function displayTable(products) {
+  let stream = createStream({
+    columnDefault: { width: 12 },
+    columnCount: 4,
+    columns: {
+      0: { 
+        width       : TBL_CONST.ID.width, 
+        alignment   : 'right', 
+        paddingLeft : 1,
+        paddingRight: 1 },
+      1: { 
+        width       : TBL_CONST.PROD.width, 
+        alignment   : 'left', 
+        paddingLeft : 1,
+        paddingRight: 1,
+        // wrapWord    : true, //!problem with table package & colors
+        truncate    : 64 },
+      2: { 
+        width       : TBL_CONST.PRICE.width+2, //% +2 for '$ '
+        alignment   : 'right', 
+        paddingLeft : 1 },
+      3: {
+        width       : TBL_CONST.STOCK.width,
+        alignment   : 'right',
+        paddingLeft : 1 }
+    }
+  });
+
+  //* Table Headers
+  stream.write(
+    [
+      `${TBL_CONST.ID   .header.padStart(TBL_CONST.ID   .width  )}`, 
+      `${TBL_CONST.PROD .header.padEnd  (TBL_CONST.PROD .width  )}`, 
+      `${TBL_CONST.PRICE.header.padStart(TBL_CONST.PRICE.width+2)}`, //% +2 for '$ '
+      `${TBL_CONST.STOCK.header.padStart(TBL_CONST.STOCK.width  )}`
+    ].map(colors.black.bgGreen));
+  
+  //* Table Rows
+  products.forEach((record, index) => {
+    // console.log(record);
+    let dataRow = [
+      record.item_id, 
+      record.product_name, 
+      `$ ${record.price.toFixed(2).padStart(TBL_CONST.PRICE.width)}`,
+      record.stock_quantity
+    ];
+    // apply color to every-other row
+    if (index&1) { dataRow = dataRow.map(colors.green) };
+    stream.write(dataRow);
+  });
+  console.log(); // stream needs a new line when complete
+  return;
+}
 
 
 async function afterConnection() {
@@ -62,118 +121,71 @@ async function afterConnection() {
   // #region QUERY - ALL PRODUCTS
   let products;
   try {
-    products = (await getAllProducts()).results;
+    products = (await query_AllProductsInStock()).results;
   } catch(error) {
     console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
     return;
   }
   // console.log(products);
-  // #endregion QUERY - ALL PRODUCTS
   if (!products) { //? Array.isArray(products) && products.length === 0) {
     console.log("Sorry, query returned no product results.");
     return;
   }
+  // #endregion QUERY - ALL PRODUCTS
 
-  let prodIDs = products.map(record => record.item_id);
+  const prodIDs = products.map(record => record.item_id);
   
-  //*        DISPLAY TABLE
-  // #region DISPLAY TABLE
-  let stream = createStream({
-    columnDefault: { width: 12 },
-    columnCount: 4,
-    columns: {
-      0: { 
-        width       : MAX_ID_LENGTH, 
-        alignment   : 'right', 
-        paddingLeft: 1,
-        paddingRight: 1 },
-      1: { 
-        width       : 20, 
-        alignment   : 'left', 
-        paddingLeft : 2,
-        paddingRight: 1,
-        // wrapWord    : true, //!problem with table package & colors
-        truncate    : 64 },
-      2: { 
-        width       : MAX_PRICE_LENGTH+2, 
-        alignment   : 'right', 
-        paddingLeft : 1 },
-      3: {
-        width       : MAX_STOCK_QTY_LENGTH,
-        alignment   : 'right',
-        paddingLeft : 1 }
-    }
-  });
+  displayTable(products);
 
-  // Headers
-  stream.write([
-    colors.black.bgGreen(`${"ID ".padStart(MAX_ID_LENGTH)}`), 
-    colors.black.bgGreen(`${"  Product Name".padEnd(20)}`), 
-    colors.black.bgGreen(`${"Price "  .padStart(MAX_PRICE_LENGTH+2)}`),
-    colors.black.bgGreen(`${"In Stock".padStart(MAX_STOCK_QTY_LENGTH)}`),
-  ]);
-  
-  products.forEach((record, index) => {
-    // console.log(record);
-    let datarow = [
-      record.item_id, 
-      record.product_name, 
-      `$${record.price.toFixed(2).padStart(MAX_PRICE_LENGTH)}`,
-      record.stock_quantity
-    ];
-    // apply color to every-other row
-    if (index&1) { datarow = datarow.map(colors.green) };
-    stream.write(datarow);
-  });
-  console.log(); // stream needs a new line when complete
-  // #endregion DISPLAY TABLE
-
-  //* PROMPT USER
-  let userInput = await inquirer.prompt([
+  //*        PROMPT USER for Product & Quantity
+  // #region PROMPT USER
+  let prodIDInput = (await inquirer.prompt([
     {
       name: "productID",
       message: `Please enter the ${colors.green('ID')} of the product you wish to buy (or 'exit')):`,
-      validate: checkID => {
-        return checkID.toLowerCase() === "exit" 
-          || prodIDs.includes(+checkID)
-          || "No product known by that ID.";
-      }
-    },
-    {
-      name: "quantity",
-      message: `How ${colors.green(many)} would you like to ${colors.green('buy')} (0 to cancel): `,
-      when: userInput => userInput.productID !== 'exit',
-      validate: checkQty => 
-        (Number.isInteger(+checkQty) && +checkQty >= 0) || "Quantity needs to be a positive whole number.",
-      filter: Number
+      validate: checkID => 
+        checkID.toLowerCase() === "exit" 
+          || prodIDs.includes(+checkID) 
+          || "No product known by that ID."
     }
-  ]);
-  // console.log(userInput);
+  ])).productID;
+  // console.log(prodIDInput);
+  if (prodIDInput === 'exit') { return; }
 
-  if (userInput.productID === 'exit' || userInput.quantity === 0) { return; }
-
-  const theProdID = Number(userInput.productID);
-  const theBuyQty =        userInput.quantity  ;
-
-  //! validation above assures there should be an indexOf (not -1)
-  const theProduct = products[prodIDs.indexOf(theProdID)];
+  //% validation above assures there should be an indexOf (not -1)
+  const theProduct = products[prodIDs.indexOf(Number(prodIDInput))];
   const stockQty = theProduct.stock_quantity;
 
-  if (stockQty < theBuyQty) {
-    console.log(`Sorry, there is not enough of that product in stock to complete your order. Only ${stockQty} left).`);
-    return;
-  }
-
+  let qtyInput = (await inquirer.prompt([
+    {
+      name: "quantity",
+      message: `How ${colors.green('many')} would you like to buy (0 to cancel order): `,
+      filter: Number, //* filter happens before validate 
+      validate: checkQty => {
+        if (!(Number.isInteger(checkQty) && checkQty >= 0)) {
+          return "Quantity needs to be a positive whole number."
+        }
+        if (stockQty < checkQty) {
+          return `Not enough in stock. Only ${colors.green(stockQty)} left.`
+        }
+        return true;
+      },
+    }
+  ])).quantity;
+  // console.log(qtyInput);
+  if (qtyInput === 0) { return; }
+  // #endregion PROMPT USER
+  
   //*        QUERY - UPDATE SELECTED PRODUCT
   // #region QUERY - UPDATE SELECTED PRODUCT  
   let updatedProduct;
   try {
-    updatedProduct = (await updateProduct({
+    updatedProduct = (await query_UpdateProduct({
       set: {
-        stock_quantity: stockQty - theBuyQty
+        stock_quantity: stockQty - qtyInput
       },
       where: {
-        item_id: theProdID
+        item_id: prodIDInput
       }
     })).results;
   } catch(error) {
@@ -184,7 +196,6 @@ async function afterConnection() {
     throw error;
   }
   // console.log(updatedProduct);
-  // #endregion QUERY - UPDATE SELECTED PRODUCT
   if (updatedProduct.changedRows === 0) {
     console.log("Sorry, there was a problem with fulfilling the order. Please try again.");
     return;
@@ -194,9 +205,11 @@ async function afterConnection() {
     console.error("ERROR: purchase update affected multiple items.", updatedProduct);
     return; 
   }
+  // #endregion QUERY - UPDATE SELECTED PRODUCT
 
-  const cost = (theBuyQty * theProduct.price).toFixed(2);
-  console.log(`Thank you for your purchase!\nYour total cost is ${colors.green('$'+cost)}`);
+  //* Display Order Completion
+  const cost = (qtyInput * theProduct.price).toFixed(2);
+  console.log(`\nThank you for your purchase!\nYour total cost is ${colors.green('$'+cost)}`);
 }
 
 // #region START OF EXECUTION
@@ -206,13 +219,14 @@ connection.connect(async function(error) {
     return;
   };
   // console.log("Connected to mysql db as id " + connection.threadId);
+  console.log(`\nWelcome to ${colors.green('BAMazon')}!\nThe below items are in stock and available for purchase.`);
   try {
     await afterConnection();
   } catch(err) {
     console.error("An error occurred: ", err);
   }
   finally {
-    console.log("FINALLY");
+    // console.log("FINALLY");
     connection.end();
   }
 });
