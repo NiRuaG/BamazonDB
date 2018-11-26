@@ -51,52 +51,9 @@ const MENU_CONST = {
   },
 }
 
-function menu_ViewProductsForSale() {
-  console.log("view products for sale");
-}
 
-function menu_ViewLowInventory() {
-  console.log("view low inventory");
-}
-
-function menu_AddToInventory() {
-  console.log("add to inventory");
-}
-
-function menu_AddNewProduct() {
-  console.log("add new product");
-}
-
-const queryPromise = queryObj =>
-  new Promise(function (resolve, reject) {
-    let query = connection.query(queryObj, function(error, results, fields) {
-      if (error) { return reject(error); }
-      resolve(
-        {
-           results: results,
-            fields: fields,
-             query: query
-        });
-    });
-  });
-
-// #region Query Promises
-const query_AllProductsInStock = () =>
-  queryPromise({
-    sql: 'SELECT * FROM `products` WHERE `stock_quantity` > 0',
-  });
-
-const query_UpdateProduct = (updateQueryObj) =>
-  queryPromise({
-      sql: "UPDATE `products` SET ? WHERE ?",
-    values: [
-      updateQueryObj.set, updateQueryObj.where
-    ]
-  });
-// #endregion Query Promises
-
-function displayTable(products) {
-  let stream = createStream({
+function displayTable(products, headerColor = colors.black.bgGreen, rowStripeColor = colors.green) {
+  const stream = createStream({
     columnDefault: { width: 12 },
     columnCount: 4,
     columns: {
@@ -130,7 +87,7 @@ function displayTable(products) {
       `${TBL_CONST.PROD .header.padEnd  (TBL_CONST.PROD .width  )}`, 
       `${TBL_CONST.PRICE.header.padStart(TBL_CONST.PRICE.width+2)}`, //% +2 for '$ '
       `${TBL_CONST.STOCK.header.padStart(TBL_CONST.STOCK.width  )}`
-    ].map(colors.black.bgGreen));
+    ].map(headerColor));
   
   //* Table Rows
   products.forEach((record, index) => {
@@ -142,12 +99,272 @@ function displayTable(products) {
       record.stock_quantity
     ];
     // apply color to every-other row
-    if (index&1) { dataRow = dataRow.map(colors.green) };
+    if (index&1) { dataRow = dataRow.map(rowStripeColor) };
     stream.write(dataRow);
   });
   console.log(); // stream needs a new line when complete
   return;
 }
+
+// #region Query Promises
+const queryPromise = queryObj =>
+  new Promise(function (resolve, reject) {
+    let query = connection.query(queryObj, function(error, results, fields) {
+      if (error) { return reject(error); }
+      resolve(
+        {
+           results: results,
+            fields: fields,
+             query: query
+        });
+    });
+  });
+
+const query_ProductsAll = () =>
+  queryPromise({
+       sql: 'SELECT * FROM `products`',
+  });
+
+const query_ProductsWithLowStock = () =>
+  queryPromise({
+    sql: 'SELECT * FROM `products` WHERE `stock_quantity` < 5',
+  });
+
+const query_UpdateProduct = (updateQueryObj) =>
+  queryPromise({
+      sql: "UPDATE `products` SET ? WHERE ?",
+    values: [
+      updateQueryObj.set, updateQueryObj.where
+    ]
+  });
+
+const query_InsertProduct = (insertQueryObj) => 
+  queryPromise({
+       sql: "INSERT INTO `products` VALUES ?",
+    values: insertQueryObj
+  });
+// #endregion Query Promises
+
+
+// #region MENU FUNCTIONS
+async function menu_ViewProductsForSale() {
+  //*        QUERY - ALL PRODUCTS
+  // #region QUERY - ALL PRODUCTS
+  let products;
+  try {
+    products = (await query_ProductsAll()).results;
+  } catch(error) {
+    console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
+    return;
+  }
+  // console.log(products);
+  if (!products) { //? Array.isArray(products) && products.length === 0) {
+    console.log("Sorry, query returned no product results.");
+    return;
+  }
+  // #endregion QUERY - ALL PRODUCTS
+
+  displayTable(products, colors.black.bgGreen, colors.green);
+
+  return;
+}
+
+async function menu_ViewLowInventory() {
+  //*        QUERY - ALL PRODUCTS
+  // #region QUERY - ALL PRODUCTS
+  let products;
+  try {
+    products = (await query_ProductsWithLowStock()).results;
+  } catch(error) {
+    console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
+    return;
+  }
+  // console.log(products);
+  if (!products) { //? Array.isArray(products) && products.length === 0) {
+    console.log("Sorry, query returned no product results.");
+    return;
+  }
+  // #endregion QUERY - ALL PRODUCTS
+
+  displayTable(products, colors.black.bgRed, colors.red);
+
+  return;
+}
+
+async function menu_AddToInventory() {
+  //*        QUERY - ALL PRODUCTS
+  // #region QUERY - ALL PRODUCTS
+  let products;
+  try {
+    products = (await query_ProductsAll()).results;
+  } catch(error) {
+    console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
+    return;
+  }
+  // console.log(products);
+  if (!products) { //? Array.isArray(products) && products.length === 0) {
+    console.log("Sorry, query returned no product results.");
+    return;
+  }
+  // #endregion QUERY - ALL PRODUCTS
+  const prodIDs = products.map(record => record.item_id);
+
+  //*        PROMPT USER for Product & Quantity
+  // #region PROMPT USER
+  const prodIDInput = (await inquirer.prompt([
+    {
+      name: "productID",
+      message: `Product ${colors.green('ID')} to stock (or 'exit')):`,
+      validate: checkID => 
+        checkID.toLowerCase() === "exit" 
+          || prodIDs.includes(+checkID) 
+          || "No product known by that ID."
+    }
+  ])).productID;
+  // console.log(prodIDInput);
+  if (prodIDInput === 'exit') { return; }
+
+  //% validation above assures there should be an indexOf (not -1)
+  const theProduct = products[prodIDs.indexOf(Number(prodIDInput))];
+
+  const qtyInput = (await inquirer.prompt([
+    {
+      name: "quantity",
+      message: `How ${colors.green('much')} would you like to add to stock (0 to cancel): `,
+      filter: Number, //* filter happens before validate 
+      validate: checkQty => 
+        Number.isInteger(checkQty) && checkQty >= 0
+          || "Quantity needs to be a positive whole number."
+    }
+  ])).quantity;
+  // console.log(qtyInput);
+  if (qtyInput === 0) { return; }
+  // #endregion PROMPT USER
+
+  //*        QUERY - UPDATE SELECTED PRODUCT
+  // #region QUERY - UPDATE SELECTED PRODUCT  
+  let updatedProduct;
+  try {
+    updatedProduct = (await query_UpdateProduct({
+      set: {
+        stock_quantity: theProduct.stock_quantity + qtyInput
+      },
+      where: {
+        item_id: prodIDInput
+      }
+    })).results;
+  } catch(error) {
+    if (error.code && error.sqlMessage) {
+      console.log(`Update error: ${error.code}: ${error.sqlMessage}`);
+      return;
+    }
+    throw error;
+  }
+  // console.log(updatedProduct);
+  if (updatedProduct.changedRows === 0) {
+    console.log("Sorry, there was a problem stocking the product. Please try again.");
+    return;
+  }
+  if (updatedProduct.changedRows !== 1) {
+    //! eep. id was not unique!? now multiple rows were added in stock qty
+    console.error("ERROR: stock update affected multiple items.", updatedProduct);
+    return; 
+  }
+  // #endregion QUERY - UPDATE SELECTED PRODUCT
+
+  //* Display Stock Completion
+  console.log(`\n\tOK.  ${colors.green(qtyInput)} units added to Product #${colors.green(prodIDInput)}, '${theProduct.product_name}'\n`);
+
+  return;
+}
+
+async function menu_AddNewProduct() {
+  //*        PROMPT USER for New Product Info
+  // #region PROMPT USER
+  const newProdInput = (await inquirer.prompt([
+    {
+      name: 'name',
+      message: `New Product's ${colors.green('name')} (blank will cancel):`,
+      filter: input => input.trim(),
+    },
+    {
+      when: curAnswers => curAnswers.name,
+      name: 'price',
+      message: `New Product's ${colors.green('price')}:`,
+      filter: Number, // filter happens before validate
+      validate: checkPrice => {
+        if (!(Number.isInteger(checkPrice*100) && checkPrice > 0)) {
+          return "Price needs to be a positive number (up to 2 digits after decimal).";
+        }
+        return true;
+      },
+    },
+    {
+      when: curAnswers => curAnswers.name,
+      name: 'quantity',
+      message: `New Product's initial ${colors.green('quantity')} in stock:`,
+      default: 0,
+      filter: Number,
+      validate: checkQty => {
+        if (!(Number.isInteger(checkQty) && checkQty >= 0)) {
+          return "Quantity needs to be a non-negative whole number."
+        }
+        return true;
+      }
+    },
+    {
+      when: curAnswers => curAnswers.name,
+      name: 'confirmed',
+      type: 'confirm',
+      message: currAnswers => {
+        console.log(`\n\t${colors.green(currAnswers.quantity)} units of '${colors.green(currAnswers.name)}'  @ ${colors.green('$'+currAnswers.price.toFixed(2))}\n`);
+        return "Is this correct?";
+      }
+    }
+  ]));
+  console.log(newProdInput);
+  if (!newProdInput.confirmed || !newProdInput.name) {
+    return console.log(`\n\tNew Product ${colors.red('CANCELLED')}\n`);
+  }
+
+  //*        QUERY - INSERT New Product
+  // #region QUERY - INSERT   
+  let insertedProduct;
+  try {
+    insertedProduct = (await queryPromise({
+         sql: "INSERT INTO `products` VALUES ?",
+      values: {
+        product_name   : insertQueryObj.name,
+               price   : insertQueryObj.price,
+        stock_quantity : insertQueryObj.quantity
+      }
+    })).results;
+  } catch(error) {
+    if (error.code && error.sqlMessage) {
+      console.log(`Insert error: ${error.code}: ${error.sqlMessage}`);
+      return;
+    }
+    throw error;
+  }
+  // console.log(insertedProduct);
+  // if (insertedProduct.changedRows === 0) {
+  //   console.log("Sorry, there was a problem stocking the product. Please try again.");
+  //   return;
+  // }
+  // if (insertedProduct.changedRows !== 1) {
+  //   //! eep. id was not unique!? now multiple rows were added in stock qty
+  //   console.error("ERROR: stock update affected multiple items.", insertedProduct);
+  //   return; 
+  // }
+  // #endregion QUERY - UPDATE SELECTED PRODUCT
+
+  // //* Display Stock Completion
+  // console.log(`\n\tOK.  ${colors.green(qtyInput)} units added to Product #${colors.green(prodIDInput)}, '${theProduct.product_name}'\n`);
+
+  return;
+}
+
+// #endregion MENU FUNCTIONS
 
 
 async function afterConnection() {
@@ -155,144 +372,27 @@ async function afterConnection() {
 
   //*        PROMPT - Menu Selection
   // #region PROMPT - Menu Selection
-  let menuSelection = (await inquirer.prompt([
-    {
-      name: 'menuItem',
-      type: 'list',
-      choices: [
-        MENU_CONST.VIEW_PROD,
-        MENU_CONST.VIEW_LOWSTOCK,
-        new inquirer.Separator(),
-        MENU_CONST.ADD_STOCK,
-        MENU_CONST.ADD_PRODUCT,
-        new inquirer.Separator(),
-        { name: "5. Exit", value: 'exit' }
-      ],
-      message: `Please select from the menu below:`,
-    }
-  ])).menuItem;
-  // console.log(menuItem);
-  if (menuSelection === 'exit') { return; }
-  MENU_CONST[menuSelection].func();
-
-  // //% validation above assures there should be an indexOf (not -1)
-  // const theProduct = products[prodIDs.indexOf(Number(prodIDInput))];
-  // const stockQty = theProduct.stock_quantity;
-
-  // let qtyInput = (await inquirer.prompt([
-  //   {
-  //     name: "quantity",
-  //     message: `How ${colors.green('many')} would you like to buy (0 to cancel order): `,
-  //     filter: Number, //* filter happens before validate 
-  //     validate: checkQty => {
-  //       if (!(Number.isInteger(checkQty) && checkQty >= 0)) {
-  //         return "Quantity needs to be a positive whole number."
-  //       }
-  //       if (stockQty < checkQty) {
-  //         return `Not enough in stock. Only ${colors.green(stockQty)} left.`
-  //       }
-  //       return true;
-  //     },
-  //   }
-  // ])).quantity;
-  // // console.log(qtyInput);
-  // if (qtyInput === 0) { return; }
-  // // #endregion PROMPT - Menu Selection
-  
-
-  // //*        QUERY - ALL PRODUCTS
-  // // #region QUERY - ALL PRODUCTS
-  // let products;
-  // try {
-  //   products = (await query_AllProductsInStock()).results;
-  // } catch(error) {
-  //   console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
-  //   return;
-  // }
-  // // console.log(products);
-  // if (!products) { //? Array.isArray(products) && products.length === 0) {
-  //   console.log("Sorry, query returned no product results.");
-  //   return;
-  // }
-  // // #endregion QUERY - ALL PRODUCTS
-
-  // const prodIDs = products.map(record => record.item_id);
-  
-  // displayTable(products);
-
-  // //*        PROMPT USER for Product & Quantity
-  // // #region PROMPT USER
-  // let prodIDInput = (await inquirer.prompt([
-  //   {
-  //     name: "productID",
-  //     message: `Please enter the ${colors.green('ID')} of the product you wish to buy (or 'exit')):`,
-  //     validate: checkID => 
-  //       checkID.toLowerCase() === "exit" 
-  //         || prodIDs.includes(+checkID) 
-  //         || "No product known by that ID."
-  //   }
-  // ])).productID;
-  // // console.log(prodIDInput);
-  // if (prodIDInput === 'exit') { return; }
-
-  // //% validation above assures there should be an indexOf (not -1)
-  // const theProduct = products[prodIDs.indexOf(Number(prodIDInput))];
-  // const stockQty = theProduct.stock_quantity;
-
-  // let qtyInput = (await inquirer.prompt([
-  //   {
-  //     name: "quantity",
-  //     message: `How ${colors.green('many')} would you like to buy (0 to cancel order): `,
-  //     filter: Number, //* filter happens before validate 
-  //     validate: checkQty => {
-  //       if (!(Number.isInteger(checkQty) && checkQty >= 0)) {
-  //         return "Quantity needs to be a positive whole number."
-  //       }
-  //       if (stockQty < checkQty) {
-  //         return `Not enough in stock. Only ${colors.green(stockQty)} left.`
-  //       }
-  //       return true;
-  //     },
-  //   }
-  // ])).quantity;
-  // // console.log(qtyInput);
-  // if (qtyInput === 0) { return; }
-  // // #endregion PROMPT USER
-  
-  // //*        QUERY - UPDATE SELECTED PRODUCT
-  // // #region QUERY - UPDATE SELECTED PRODUCT  
-  // let updatedProduct;
-  // try {
-  //   updatedProduct = (await query_UpdateProduct({
-  //     set: {
-  //       stock_quantity: stockQty - qtyInput
-  //     },
-  //     where: {
-  //       item_id: prodIDInput
-  //     }
-  //   })).results;
-  // } catch(error) {
-  //   if (error.code && error.sqlMessage) {
-  //     console.log(`Update error: ${error.code}: ${error.sqlMessage}`);
-  //     return;
-  //   }
-  //   throw error;
-  // }
-  // // console.log(updatedProduct);
-  // if (updatedProduct.changedRows === 0) {
-  //   console.log("Sorry, there was a problem with fulfilling the order. Please try again.");
-  //   return;
-  // }
-  // if (updatedProduct.changedRows !== 1) {
-  //   //! eep. id was not unique!? and now multiple rows were reduced in stock qty
-  //   console.error("ERROR: purchase update affected multiple items.", updatedProduct);
-  //   return; 
-  // }
-  // // #endregion QUERY - UPDATE SELECTED PRODUCT
-
-  // //* Display Order Completion
-  // const cost = (qtyInput * theProduct.price).toFixed(2);
-  // console.log(`\nThank you for your purchase!\nYour total cost is ${colors.green('$'+cost)}`);
+  while(true) {
+    let menuSelection = (await inquirer.prompt([
+      {
+        name: 'menuItem',
+        type: 'list',
+        choices: [
+          MENU_CONST.VIEW_PROD,
+          MENU_CONST.VIEW_LOWSTOCK,
+          new inquirer.Separator(),
+          MENU_CONST.ADD_STOCK,
+          MENU_CONST.ADD_PRODUCT,
+          new inquirer.Separator(),
+          { name: "5. Exit", value: 'exit' }
+        ],
+        message: `Please select from the menu below:`,
+      }
+    ])).menuItem;
+    // console.log(menuItem);
+    if (menuSelection === 'exit') { return; }
+    await MENU_CONST[menuSelection].func();
+  }
 }
 
 // #region START OF EXECUTION

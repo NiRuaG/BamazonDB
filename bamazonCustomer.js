@@ -33,6 +33,7 @@ for (let c of Object.values(TBL_CONST)) {
   c.width = c.width || Math.max(c.header.length, c.max.toString().length);
 }
 
+// #region Query Promises
 const queryPromise = queryObj =>
   new Promise(function (resolve, reject) {
     const query = connection.query(queryObj, function(error, results, fields) {
@@ -46,7 +47,6 @@ const queryPromise = queryObj =>
     });
   });
 
-// #region Query Promises
 const query_AllProductsInStock = () =>
   queryPromise({
     sql: 'SELECT * FROM `products` WHERE `stock_quantity` > 0',
@@ -162,7 +162,7 @@ async function afterConnection() {
     {
       name: "quantity",
       message: `How ${colors.green('many')} would you like to buy (0 to cancel order): `,
-      filter: Number, //* filter happens before validate 
+      filter: Number, // filter happens before validate 
       validate: checkQty => {
         if (!(Number.isInteger(checkQty) && checkQty >= 0)) {
           return "Quantity needs to be a positive whole number."
