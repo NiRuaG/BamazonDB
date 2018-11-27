@@ -12,6 +12,7 @@ const keys = require("./keys");
 // console.log({ keys });
 //#endregion
 
+//#region CONSTANTS
 const connection = mysql.createConnection({
   host: "localhost",
   port: 3306,
@@ -50,6 +51,9 @@ const MENU_CONST = {
     value: 'ADD_PRODUCT'  , name: "4. Add New Product"       , func: menu_AddNewProduct
   },
 }
+//#endregion CONSTANTS
+
+
 
 
 function displayTable(products, headerColor = colors.black.bgGreen, rowStripeColor = colors.green) {
@@ -140,9 +144,9 @@ const query_UpdateProduct = (updateQueryObj) =>
 
 const query_InsertProduct = (insertQueryObj) => 
   queryPromise({
-       sql: "INSERT INTO `products` VALUES ?",
-    values: insertQueryObj
-  });
+      sql: "INSERT INTO `products` SET ?",
+    values: [insertQueryObj]
+})
 // #endregion Query Promises
 
 
@@ -258,7 +262,7 @@ async function menu_AddToInventory() {
       console.log(`Update error: ${error.code}: ${error.sqlMessage}`);
       return;
     }
-    throw error;
+    else throw error;
   }
   // console.log(updatedProduct);
   if (updatedProduct.changedRows === 0) {
@@ -324,42 +328,37 @@ async function menu_AddNewProduct() {
   ]));
   console.log(newProdInput);
   if (!newProdInput.confirmed || !newProdInput.name) {
-    return console.log(`\n\tNew Product ${colors.red('CANCELLED')}\n`);
+    console.log(`\n\tNew Product ${colors.red('CANCELLED')}\n`);
+    return;
   }
 
   //*        QUERY - INSERT New Product
   // #region QUERY - INSERT   
   let insertedProduct;
   try {
-    insertedProduct = (await queryPromise({
-         sql: "INSERT INTO `products` VALUES ?",
-      values: {
-        product_name   : insertQueryObj.name,
-               price   : insertQueryObj.price,
-        stock_quantity : insertQueryObj.quantity
-      }
-    })).results;
+    insertedProduct = (await query_InsertProduct(
+      {
+        product_name   : newProdInput.name,
+               price   : newProdInput.price,
+        stock_quantity : newProdInput.quantity
+     })).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
       console.log(`Insert error: ${error.code}: ${error.sqlMessage}`);
       return;
     }
-    throw error;
+    else throw error;
   }
   // console.log(insertedProduct);
-  // if (insertedProduct.changedRows === 0) {
-  //   console.log("Sorry, there was a problem stocking the product. Please try again.");
-  //   return;
-  // }
-  // if (insertedProduct.changedRows !== 1) {
-  //   //! eep. id was not unique!? now multiple rows were added in stock qty
-  //   console.error("ERROR: stock update affected multiple items.", insertedProduct);
-  //   return; 
-  // }
+
+  if (insertedProduct.affectedRows === 0) {
+    console.log("Sorry, there was a problem adding the product. Please try again.");
+    return;
+  }
   // #endregion QUERY - UPDATE SELECTED PRODUCT
 
-  // //* Display Stock Completion
-  // console.log(`\n\tOK.  ${colors.green(qtyInput)} units added to Product #${colors.green(prodIDInput)}, '${theProduct.product_name}'\n`);
+  //* Display Completion Message
+  console.log(`\n\t${colors.green("OK")}. Product '${colors.green(newProdInput.name)}', ID ${'#'+colors.green(insertedProduct.insertId)}, added\n`);
 
   return;
 }
