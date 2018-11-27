@@ -1,12 +1,9 @@
 //#region NPM
-require('dotenv').config();
-const mysql    = require('mysql');
 const colors   = require('ansi-colors');
 const inquirer = require('inquirer');
 //#endregion
 
 //#region LOCAL Modules
-const keys = require("./keys");
 // console.log({ keys });
 const bamazon = require("./bamazon");
 // console.log(bamazon);
@@ -47,7 +44,8 @@ const query_UpdateProduct = (updateQueryObj) =>
   bamazon.queryPromise({
       sql: "UPDATE `products` SET ? WHERE ?",
     values: [
-      updateQueryObj.set, updateQueryObj.where
+      updateQueryObj.set,
+      updateQueryObj.where
     ]
   });
 
@@ -247,8 +245,8 @@ async function menu_AddNewProduct() {
   try {
     insertedProduct = (await query_InsertProduct(
       {
-        product_name   : newProdInput.name,
-               price   : newProdInput.price,
+          product_name : newProdInput.name,
+                 price : newProdInput.price,
         stock_quantity : newProdInput.quantity
      })).results;
   } catch(error) {

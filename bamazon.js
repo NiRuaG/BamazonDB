@@ -3,6 +3,7 @@ const mysql        = require('mysql');
 const createStream = require('table').createStream;
 const colors       = require('ansi-colors');
 
+require('dotenv').config();
 const keys = require("./keys");
 
 
@@ -79,7 +80,8 @@ const bamazon = {
       if (index&1) { dataRow = dataRow.map(rowStripeColor) };
       stream.write(dataRow);
     });
-    return console.log(); // stream needs a new line when complete
+    
+    return console.log('\n'); // stream needs a new line (or 2) when complete
   },
 
   queryPromise: queryObj =>

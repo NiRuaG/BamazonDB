@@ -1,5 +1,5 @@
 //#region NPM
-require('dotenv').config();
+// require('dotenv').config();
 const colors   = require('ansi-colors');
 const inquirer = require('inquirer');
 //#endregion
@@ -26,7 +26,7 @@ const query_UpdateProduct = (updateQueryObj) =>
 // #endregion Query Promises
 
 async function afterConnection() {
-  console.log(`\n\tWelcome to ${colors.green('BAMazon')}!\nThe below items are in stock and available for purchase.\n`);
+  console.log(`\n\tWelcome to ${colors.green('BAMazon')}!\n\nThe below items are in stock and available for purchase.\n`);
 
   //*        QUERY - ALL PRODUCTS
   // #region QUERY - ALL PRODUCTS
@@ -63,7 +63,9 @@ async function afterConnection() {
     }
   ])).productID;
   // console.log(prodIDInput);
-  if (prodIDInput === 'exit') { return; }
+  if (prodIDInput === 'exit') {
+    return console.log(`\n\t${colors.red("Exited")}.  Come back again!`); 
+  }
 
   //% validation above assures there should be an indexOf (not -1)
   const theProduct = products[prodIDs.indexOf(Number(prodIDInput))];
@@ -86,7 +88,9 @@ async function afterConnection() {
     }
   ])).quantity;
   // console.log(qtyInput);
-  if (qtyInput === 0) { return; }
+  if (qtyInput === 0) { 
+    return console.log(`\n\tOrder ${colors.red("Cancelled")}.`); 
+  }
   // #endregion PROMPT USER
   
   //*        QUERY - UPDATE SELECTED PRODUCT
@@ -122,7 +126,7 @@ async function afterConnection() {
 
   //* Display Order Completion
   const cost = (qtyInput * theProduct.price).toFixed(2);
-  console.log(`\nThank you for your purchase!\nYour total cost is ${colors.green('$'+cost)}`);
+  console.log(`\n\t${colors.green("Thank you")} for your purchase!\n\tYour total cost is ${colors.green('$'+cost)}`);
 }
 
 // #region START OF EXECUTION
