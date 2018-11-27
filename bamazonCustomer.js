@@ -1,59 +1,23 @@
 //#region NPM
 require('dotenv').config();
-const mysql        = require('mysql');
-const colors       = require('ansi-colors');
-//// const table        = require('table').table;
-const createStream = require('table').createStream;
-const inquirer     = require('inquirer');
+const colors   = require('ansi-colors');
+const inquirer = require('inquirer');
 //#endregion
 
 //#region LOCAL Modules
-const keys = require("./keys");
-// console.log({ keys });
+const bamazon = require("./bamazon");
+// console.log(bamazon);
 //#endregion
 
-const connection = mysql.createConnection({
-  host: "localhost",
-  port: 3306,
-
-  user    : keys.mysql.user,
-  password: keys.mysql.pw  ,
-
-  database: "bamazon"
-});
-
-const TBL_CONST = {
-  ID   : { header: " ID "           , max: 999999    },
-  PRICE: { header: " Price "        , max:   9999.99 },
-  STOCK: { header: " Stock "        , max:    999    },
-
-  PROD : { header: "  Product Name ", width: 20 },
-};
-for (let c of Object.values(TBL_CONST)) {
-  c.width = c.width || Math.max(c.header.length, c.max.toString().length);
-}
 
 // #region Query Promises
-const queryPromise = queryObj =>
-  new Promise(function (resolve, reject) {
-    const query = connection.query(queryObj, function(error, results, fields) {
-      if (error) { return reject(error); }
-      resolve(
-        {
-           results: results,
-            fields: fields,
-             query: query
-        });
-    });
-  });
-
 const query_AllProductsInStock = () =>
-  queryPromise({
+  bamazon.queryPromise({
     sql: 'SELECT * FROM `products` WHERE `stock_quantity` > 0',
   });
 
 const query_UpdateProduct = (updateQueryObj) =>
-  queryPromise({
+  bamazon.queryPromise({
       sql: "UPDATE `products` SET ? WHERE ?",
     values: [
       updateQueryObj.set, updateQueryObj.where
@@ -61,63 +25,8 @@ const query_UpdateProduct = (updateQueryObj) =>
   });
 // #endregion Query Promises
 
-function displayTable(products) {
-  const stream = createStream({
-    columnDefault: { width: 12 },
-    columnCount: 4,
-    columns: {
-      0: { 
-        width       : TBL_CONST.ID.width, 
-        alignment   : 'right', 
-        paddingLeft : 1,
-        paddingRight: 1 },
-      1: { 
-        width       : TBL_CONST.PROD.width, 
-        alignment   : 'left', 
-        paddingLeft : 1,
-        paddingRight: 1,
-        // wrapWord    : true, //!problem with table package & colors
-        truncate    : 64 },
-      2: { 
-        width       : TBL_CONST.PRICE.width+2, //% +2 for '$ '
-        alignment   : 'right', 
-        paddingLeft : 1 },
-      3: {
-        width       : TBL_CONST.STOCK.width,
-        alignment   : 'right',
-        paddingLeft : 1 }
-    }
-  });
-
-  //* Table Headers
-  stream.write(
-    [
-      `${TBL_CONST.ID   .header.padStart(TBL_CONST.ID   .width  )}`, 
-      `${TBL_CONST.PROD .header.padEnd  (TBL_CONST.PROD .width  )}`, 
-      `${TBL_CONST.PRICE.header.padStart(TBL_CONST.PRICE.width+2)}`, //% +2 for '$ '
-      `${TBL_CONST.STOCK.header.padStart(TBL_CONST.STOCK.width  )}`
-    ].map(colors.black.bgGreen));
-  
-  //* Table Rows
-  products.forEach((record, index) => {
-    // console.log(record);
-    let dataRow = [
-      record.item_id, 
-      record.product_name, 
-      `$ ${record.price.toFixed(2).padStart(TBL_CONST.PRICE.width)}`,
-      record.stock_quantity
-    ];
-    // apply color to every-other row
-    if (index&1) { dataRow = dataRow.map(colors.green) };
-    stream.write(dataRow);
-  });
-  console.log(); // stream needs a new line when complete
-  return;
-}
-
-
 async function afterConnection() {
-  console.log(`\nWelcome to ${colors.green('BAMazon')}!\nThe below items are in stock and available for purchase.`);
+  console.log(`\n\tWelcome to ${colors.green('BAMazon')}!\nThe below items are in stock and available for purchase.\n`);
 
   //*        QUERY - ALL PRODUCTS
   // #region QUERY - ALL PRODUCTS
@@ -125,8 +34,10 @@ async function afterConnection() {
   try {
     products = (await query_AllProductsInStock()).results;
   } catch(error) {
-    console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
-    return;
+    if (error.code && error.sqlMessage) {
+      console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
+    }
+    else throw error;
   }
   // console.log(products);
   if (!products) { //? Array.isArray(products) && products.length === 0) {
@@ -137,7 +48,7 @@ async function afterConnection() {
 
   const prodIDs = products.map(record => record.item_id);
   
-  displayTable(products);
+  bamazon.displayTable(products, colors.black.bgGreen, colors.green);
 
   //*        PROMPT USER for Product & Quantity
   // #region PROMPT USER
@@ -215,20 +126,19 @@ async function afterConnection() {
 }
 
 // #region START OF EXECUTION
-connection.connect(async function(error) {
+bamazon.connection.connect(async function(error) {
   if (error) { 
-    console.log("Connection error: ", error.code);
-    return;
+    return console.log(`Connection error: ${error.code || "(no code)"}: ${error.sqlMessage || "(no message)"}`);
   };
-  // console.log("Connected to mysql db as id " + connection.threadId);
+  // console.log("Connected to mysql db as id " + bamazon.connection.threadId);
   try {
     await afterConnection();
-  } catch(err) {
-    console.error("An error occurred: ", err);
+  } catch(error) {
+    console.error("An error occurred: ", error);
   }
   finally {
     // console.log("FINALLY");
-    connection.end();
+    return bamazon.connection.end();
   }
 });
 // #endregion START OF EXECUTION
