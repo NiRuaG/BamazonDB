@@ -4,7 +4,6 @@ const inquirer = require('inquirer');
 //#endregion
 
 //#region LOCAL Modules
-// console.log({ keys });
 const bamazon = require("./bamazon");
 // console.log(bamazon);
 //#endregion
@@ -12,116 +11,107 @@ const bamazon = require("./bamazon");
 //#region CONSTANTS
 const MENU_CONST = {
   VIEW_PROD: {
-    value: 'VIEW_PROD'    , name: "1. View Products for Sale", func: menu_ViewProductsForSale
+    value: 'VIEW_PROD'    , name: "1. View All Products" , func: menu_ViewProductsForSale
   },
 
   VIEW_LOWSTOCK: {
-    value: 'VIEW_LOWSTOCK', name: "2. View Low Inventory"    , func: menu_ViewLowInventory
+    value: 'VIEW_LOWSTOCK', name: "2. View Low Inventory", func: menu_ViewLowInventory
   },
 
   ADD_STOCK: {
-    value: 'ADD_STOCK'    , name: "3. Add to Inventory"      , func: menu_AddToInventory
+    value: 'ADD_STOCK'    , name: "3. Add to Inventory"  , func: menu_AddToInventory
   },
 
   ADD_PRODUCT: {
-    value: 'ADD_PRODUCT'  , name: "4. Add New Product"       , func: menu_AddNewProduct
+    value: 'ADD_PRODUCT'  , name: "4. Add New Product"   , func: menu_AddNewProduct
   },
 }
 //#endregion CONSTANTS
 
-// #region Query Promises
-const query_ProductsAll = () =>
-  bamazon.queryPromise({
-    sql: 'SELECT * FROM `products`',
-  });
-
-const query_ProductsWithLowStock = () =>
-  bamazon.queryPromise({
-    sql: 'SELECT * FROM `products` WHERE `stock_quantity` < 5',
-  });
-
-const query_UpdateProduct = (updateQueryObj) =>
-  bamazon.queryPromise({
-      sql: "UPDATE `products` SET ? WHERE ?",
-    values: [
-      updateQueryObj.set,
-      updateQueryObj.where
-    ]
-  });
-
-const query_InsertProduct = (insertQueryObj) => 
-  bamazon.queryPromise({
-      sql: "INSERT INTO `products` SET ?",
-    values: [insertQueryObj]
-  });
-// #endregion Query Promises
-
-
 // #region MENU FUNCTIONS
 async function menu_ViewProductsForSale() {
-  //*        QUERY - ALL PRODUCTS
-  // #region QUERY - ALL PRODUCTS
+  //* Query
   let products;
   try {
-    products = (await query_ProductsAll()).results;
+    products = (await bamazon.query_ProductsSelectAll(
+      ['item_id', 'product_name', 'price', 'stock_quantity']
+    )).results;
   } catch(error) {
-    console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
-    return;
+    if (error.code && error.sqlMessage) {
+      // console.log(error);
+      return console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
+    }
+    // else
+      throw error;
   }
   // console.log(products);
-  if (!products) { //? Array.isArray(products) && products.length === 0) {
-    console.log("Sorry, query returned no product results.");
-    return;
-  }
-  // #endregion QUERY - ALL PRODUCTS
 
-  bamazon.displayTable(products, colors.black.bgGreen, colors.green);
+  //* Display Results
+  if (Array.isArray(products) && products.length === 0) {
+    return console.log(`\n\t${colors.red("Sorry")}, there are no such product results.\n`);
+  }
+
+  bamazon.displayTable(products, 
+    [ bamazon.TBL_CONST.ID   , 
+      bamazon.TBL_CONST.PROD , 
+      bamazon.TBL_CONST.PRICE, 
+      bamazon.TBL_CONST.STOCK ], 
+    colors.black.bgGreen, colors.green);
 
   return;
 }
 
 async function menu_ViewLowInventory() {
-  //*        QUERY - ALL PRODUCTS
-  // #region QUERY - ALL PRODUCTS
+  //* Query
   let products;
   try {
-    products = (await query_ProductsWithLowStock()).results;
+    products = (await bamazon.query_ProductsInLowStock(
+      ['item_id', 'product_name', 'price', 'stock_quantity']
+    )).results;
   } catch(error) {
-    console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
-    return;
+    if (error.code && error.sqlMessage) {
+      // console.log(error);
+      return console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
+    }
+    // else
+      throw error;
   }
   // console.log(products);
-  if (!products) { //? Array.isArray(products) && products.length === 0) {
-    console.log("Sorry, query returned no product results.");
-    return;
-  }
-  // #endregion QUERY - ALL PRODUCTS
 
-  bamazon.displayTable(products, colors.black.bgRed, colors.red);
+  //* Display Results
+  if (Array.isArray(products) && products.length === 0) {
+    return console.log(`\n\t${colors.red("Sorry")}, there are no such product results.\n`);
+  }
+
+  bamazon.displayTable(products, 
+    [ bamazon.TBL_CONST.ID   , 
+      bamazon.TBL_CONST.PROD , 
+      bamazon.TBL_CONST.PRICE, 
+      bamazon.TBL_CONST.STOCK ], 
+    colors.black.bgRed, colors.redBright);
 
   return;
 }
 
 async function menu_AddToInventory() {
-  //*        QUERY - ALL PRODUCTS
-  // #region QUERY - ALL PRODUCTS
+  //* QUERY - SELECT All Products
   let products;
   try {
-    products = (await query_ProductsAll()).results;
+    products = (await bamazon.query_ProductsSelectAll(
+      ['item_id', 'product_name', 'stock_quantity']
+    )).results;
   } catch(error) {
-    console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
-    return;
+    if (error.code && error.sqlMessage){
+      return console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
+    }
+    // else
+      throw error;
   }
   // console.log(products);
-  if (!products) { //? Array.isArray(products) && products.length === 0) {
-    console.log("Sorry, query returned no product results.");
-    return;
-  }
-  // #endregion QUERY - ALL PRODUCTS
+
   const prodIDs = products.map(record => record.item_id);
 
-  //*        PROMPT USER for Product & Quantity
-  // #region PROMPT USER
+  //* PROMPT for Product & Quantity
   const prodIDInput = (await inquirer.prompt([
     {
       name: "productID",
@@ -133,7 +123,9 @@ async function menu_AddToInventory() {
     }
   ])).productID;
   // console.log(prodIDInput);
-  if (prodIDInput === 'exit') { return; }
+  if (prodIDInput === 'exit') { 
+    return console.log(`\n\tOK.  Add to Stock ${colors.red("Exited")}\n`); 
+  }
 
   //% validation above assures there should be an indexOf (not -1)
   const theProduct = products[prodIDs.indexOf(Number(prodIDInput))];
@@ -142,21 +134,21 @@ async function menu_AddToInventory() {
     {
       name: "quantity",
       message: `How ${colors.green('much')} would you like to add to stock (0 to cancel): `,
-      filter: Number, //* filter happens before validate 
+      filter: Number, // filter happens before validate 
       validate: checkQty => 
         Number.isInteger(checkQty) && checkQty >= 0
           || "Quantity needs to be a positive whole number."
     }
   ])).quantity;
   // console.log(qtyInput);
-  if (qtyInput === 0) { return; }
-  // #endregion PROMPT USER
+  if (qtyInput === 0) { 
+    return console.log(`\n\tOK.  Add to Stock ${colors.red("Cancelled")}.\n`);
+  }
 
-  //*        QUERY - UPDATE SELECTED PRODUCT
-  // #region QUERY - UPDATE SELECTED PRODUCT  
+  //* QUERY - UPDATE Selected Product
   let updatedProduct;
   try {
-    updatedProduct = (await query_UpdateProduct({
+    updatedProduct = (await bamazon.query_ProductsUpdate({
       set: {
         stock_quantity: theProduct.stock_quantity + qtyInput
       },
@@ -166,32 +158,26 @@ async function menu_AddToInventory() {
     })).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
-      console.log(`Update error: ${error.code}: ${error.sqlMessage}`);
-      return;
+      return console.log(`Update error: ${error.code}: ${error.sqlMessage}`);
     }
-    else throw error;
+    // else 
+      throw error;
   }
   // console.log(updatedProduct);
   if (updatedProduct.changedRows === 0) {
-    console.log("Sorry, there was a problem stocking the product. Please try again.");
-    return;
+    return console.log(`\n\t${colors.red("Sorry")}, there was a problem stocking the product. ${colors.green("Please try again")}.\n`);
   }
   if (updatedProduct.changedRows !== 1) {
     //! eep. id was not unique!? now multiple rows were added in stock qty
-    console.error("ERROR: stock update affected multiple items.", updatedProduct);
-    return; 
+    return console.error("ERROR: stock update affected multiple items.", updatedProduct);
   }
-  // #endregion QUERY - UPDATE SELECTED PRODUCT
 
-  //* Display Stock Completion
-  console.log(`\n\tOK.  ${colors.green(qtyInput)} units added to Product #${colors.green(prodIDInput)}, '${theProduct.product_name}'\n`);
-
-  return;
+  //* Completion Message
+  return console.log(`\n\tOK.  ${colors.green(qtyInput)} units added to Product ${colors.green('#'+prodIDInput)}, '${theProduct.product_name}'\n`);
 }
 
 async function menu_AddNewProduct() {
-  //*        PROMPT USER for New Product Info
-  // #region PROMPT USER
+  //* PROMPT USER for New Product Info
   const newProdInput = (await inquirer.prompt([
     {
       name: 'name',
@@ -233,45 +219,39 @@ async function menu_AddNewProduct() {
       }
     }
   ]));
-  console.log(newProdInput);
+  // console.log(newProdInput);
   if (!newProdInput.confirmed || !newProdInput.name) {
-    console.log(`\n\tNew Product ${colors.red('CANCELLED')}\n`);
-    return;
+    return console.log(`\n\tOK.  New Product ${colors.red('CANCELLED')}\n`);
   }
 
-  //*        QUERY - INSERT New Product
-  // #region QUERY - INSERT   
+  //* QUERY - INSERT New Product
   let insertedProduct;
   try {
-    insertedProduct = (await query_InsertProduct(
+    insertedProduct = (await bamazon.query_ProductsInsert(
       {
-          product_name : newProdInput.name,
-                 price : newProdInput.price,
+          product_name : newProdInput.name    ,
+                 price : newProdInput.price   ,
         stock_quantity : newProdInput.quantity
      })).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
-      console.log(`Insert error: ${error.code}: ${error.sqlMessage}`);
-      return;
+      return console.log(`Insert error: ${error.code}: ${error.sqlMessage}`);
     }
-    else throw error;
+    // else 
+      throw error;
   }
   // console.log(insertedProduct);
 
   if (insertedProduct.affectedRows === 0) {
-    console.log("Sorry, there was a problem adding the product. Please try again.");
-    return;
+    return console.log(`\n\t${colors.red("Sorry")}, there was a problem adding the product. ${colors.green("Please try again")}.\n`);
   }
-  // #endregion QUERY - UPDATE SELECTED PRODUCT
 
-  //* Display Completion Message
-  console.log(`\n\t${colors.green("OK")}. Product '${colors.green(newProdInput.name)}', ID ${'#'+colors.green(insertedProduct.insertId)}, added\n`);
-
-  return;
+  //* Completion Message
+  return console.log(`\n\tOK.  Product '${colors.green(newProdInput.name)}', ID ${colors.green('#'+insertedProduct.insertId)}, added\n`);
 }
 
 // #endregion MENU FUNCTIONS
-// #endregion MENU FUNCTIONS
+
 
 async function afterConnection() {
   console.log(`\n\tWelcome ${colors.green('BAMazon')} Manager!\n`);
@@ -284,19 +264,20 @@ async function afterConnection() {
         name: 'menuItem',
         type: 'list',
         choices: [
-          MENU_CONST.VIEW_PROD,
+          MENU_CONST.VIEW_PROD    ,
           MENU_CONST.VIEW_LOWSTOCK,
           new inquirer.Separator(),
-          MENU_CONST.ADD_STOCK,
-          MENU_CONST.ADD_PRODUCT,
+          MENU_CONST.ADD_STOCK    ,
+          MENU_CONST.ADD_PRODUCT  ,
           new inquirer.Separator(),
           { name: "5. Exit", value: 'exit' }
         ],
         message: `Please select from the menu below:`,
       }
     ])).menuItem;
-    // console.log(menuItem);
+    // console.log(menuSelection);
     if (menuSelection === 'exit') { return; }
+
     await MENU_CONST[menuSelection].func();
   }
 }
@@ -304,7 +285,7 @@ async function afterConnection() {
 // #region START OF EXECUTION
 bamazon.connection.connect(async function(error) {
   if (error) { 
-    return console.log(`Connection error: ${error.code || "(no code)"}: ${error.sqlMessage || "(no message)"}`);
+    return console.log(`Connection error: ${error.code || "(no code)"}: ${error.sqlMessage || "(no SQL message)"}`);
   };
   // console.log("Connected to mysql db as id " + bamazon.connection.threadId);
   try {

@@ -17,6 +17,6 @@ VALUES
   (21356, "luctus et"              ,  53.34, 73)
 ;
 
-ALTER TABLE `products` AUTO_INCREMENT=53182;
+ALTER TABLE `products` AUTO_INCREMENT=33182;
 
 SELECT * FROM `products`;

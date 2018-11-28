@@ -1,5 +1,4 @@
 //#region NPM
-// require('dotenv').config();
 const colors   = require('ansi-colors');
 const inquirer = require('inquirer');
 //#endregion
@@ -10,48 +9,37 @@ const bamazon = require("./bamazon");
 //#endregion
 
 
-// #region Query Promises
-const query_AllProductsInStock = () =>
-  bamazon.queryPromise({
-    sql: 'SELECT * FROM `products` WHERE `stock_quantity` > 0',
-  });
-
-const query_UpdateProduct = (updateQueryObj) =>
-  bamazon.queryPromise({
-      sql: "UPDATE `products` SET ? WHERE ?",
-    values: [
-      updateQueryObj.set, updateQueryObj.where
-    ]
-  });
-// #endregion Query Promises
-
 async function afterConnection() {
   console.log(`\n\tWelcome to ${colors.green('BAMazon')}!\n\nThe below items are in stock and available for purchase.\n`);
 
   //*        QUERY - ALL PRODUCTS
-  // #region QUERY - ALL PRODUCTS
   let products;
   try {
-    products = (await query_AllProductsInStock()).results;
+    products = (await bamazon.query_ProductsInStock(
+      ['item_id', 'product_name', 'price', 'stock_quantity']
+    )).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
-      console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
+      return console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
     }
-    else throw error;
+    // else 
+      throw error;
   }
   // console.log(products);
-  if (!products) { //? Array.isArray(products) && products.length === 0) {
-    console.log("Sorry, query returned no product results.");
-    return;
+  if (Array.isArray(products) && products.length === 0) {
+    return console.log(`\n\t${colors.red("Sorry")}, there are no such product results.\n`);
   }
-  // #endregion QUERY - ALL PRODUCTS
 
   const prodIDs = products.map(record => record.item_id);
   
-  bamazon.displayTable(products, colors.black.bgGreen, colors.green);
+  bamazon.displayTable(products, 
+    [ bamazon.TBL_CONST.ID   , 
+      bamazon.TBL_CONST.PROD , 
+      bamazon.TBL_CONST.PRICE, 
+      bamazon.TBL_CONST.STOCK ], 
+    colors.black.bgGreen, colors.green);
 
   //*        PROMPT USER for Product & Quantity
-  // #region PROMPT USER
   const prodIDInput = (await inquirer.prompt([
     {
       name: "productID",
@@ -64,7 +52,7 @@ async function afterConnection() {
   ])).productID;
   // console.log(prodIDInput);
   if (prodIDInput === 'exit') {
-    return console.log(`\n\t${colors.red("Exited")}.  Come back again!`); 
+    return console.log(`\n\tOK Order ${colors.red("Exited")}.  Come back again!\n`); 
   }
 
   //% validation above assures there should be an indexOf (not -1)
@@ -89,15 +77,14 @@ async function afterConnection() {
   ])).quantity;
   // console.log(qtyInput);
   if (qtyInput === 0) { 
-    return console.log(`\n\tOrder ${colors.red("Cancelled")}.`); 
+    return console.log(`\n\tOK.  Order ${colors.red("Cancelled")}.\n`); 
   }
-  // #endregion PROMPT USER
   
   //*        QUERY - UPDATE SELECTED PRODUCT
   // #region QUERY - UPDATE SELECTED PRODUCT  
   let updatedProduct;
   try {
-    updatedProduct = (await query_UpdateProduct({
+    updatedProduct = (await bamazon.query_ProductsUpdate({
       set: {
         stock_quantity: stockQty - qtyInput
       },
@@ -110,29 +97,29 @@ async function afterConnection() {
       console.log(`Update error: ${error.code}: ${error.sqlMessage}`);
       return;
     }
-    throw error;
+    // else
+      throw error;
   }
   // console.log(updatedProduct);
+
   if (updatedProduct.changedRows === 0) {
-    console.log("Sorry, there was a problem with fulfilling the order. Please try again.");
-    return;
+    return console.log(`\n\t${colors.red("Sorry")}, there was a problem with fulfilling the order.  ${colors.green("Please try again")}.\n`);
   }
   if (updatedProduct.changedRows !== 1) {
     //! eep. id was not unique!? and now multiple rows were reduced in stock qty
-    console.error("ERROR: purchase update affected multiple items.", updatedProduct);
-    return; 
+    return console.error("ERROR: purchase update affected multiple items.", updatedProduct);
   }
   // #endregion QUERY - UPDATE SELECTED PRODUCT
 
-  //* Display Order Completion
+  //* Completion Message
   const cost = (qtyInput * theProduct.price).toFixed(2);
-  console.log(`\n\t${colors.green("Thank you")} for your purchase!\n\tYour total cost is ${colors.green('$'+cost)}`);
+  return console.log(`\n\t${colors.green("Thank you")} for your purchase!\n\tYour total cost is ${colors.green('$'+cost)}`);
 }
 
 // #region START OF EXECUTION
 bamazon.connection.connect(async function(error) {
   if (error) { 
-    return console.log(`Connection error: ${error.code || "(no code)"}: ${error.sqlMessage || "(no message)"}`);
+    return console.log(`Connection error: ${error.code || "(no code)"}: ${error.sqlMessage || "(no SQL message)"}`);
   };
   // console.log("Connected to mysql db as id " + bamazon.connection.threadId);
   try {
