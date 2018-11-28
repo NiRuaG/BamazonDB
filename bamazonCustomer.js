@@ -16,7 +16,7 @@ async function afterConnection() {
   let products;
   try {
     products = (await bamazon.query_ProductsInStock(
-      ['item_id', 'product_name', 'price', 'stock_quantity']
+      ['item_id', 'product_name', 'price', 'stock_quantity', 'product_sales']
     )).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
@@ -76,17 +76,20 @@ async function afterConnection() {
     }
   ])).quantity;
   // console.log(qtyInput);
-  if (qtyInput === 0) { 
+  if (qtyInput === 0) {
     return console.log(`\n\tOK.  Order ${colors.red("Cancelled")}.\n`); 
   }
-  
+
+  const totalCost = Math.round((qtyInput * theProduct.price)+'e2')/100;
+
   //*        QUERY - UPDATE SELECTED PRODUCT
   // #region QUERY - UPDATE SELECTED PRODUCT  
   let updatedProduct;
   try {
     updatedProduct = (await bamazon.query_ProductsUpdate({
       set: {
-        stock_quantity: stockQty - qtyInput
+        stock_quantity: stockQty - qtyInput,
+        product_sales: theProduct.product_sales + totalCost,
       },
       where: {
         item_id: prodIDInput
@@ -94,8 +97,7 @@ async function afterConnection() {
     })).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
-      console.log(`Update error: ${error.code}: ${error.sqlMessage}`);
-      return;
+      return console.log(`Update error: ${error.code}: ${error.sqlMessage}`);
     }
     // else
       throw error;
@@ -112,8 +114,7 @@ async function afterConnection() {
   // #endregion QUERY - UPDATE SELECTED PRODUCT
 
   //* Completion Message
-  const cost = (qtyInput * theProduct.price).toFixed(2);
-  return console.log(`\n\t${colors.green("Thank you")} for your purchase!\n\tYour total cost is ${colors.green('$'+cost)}`);
+  return console.log(`\n\t${colors.green("Thank you")} for your order!\n\tYour total purchase cost is ${colors.green('$'+totalCost.toFixed(2))}`);
 }
 
 // #region START OF EXECUTION
