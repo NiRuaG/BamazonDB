@@ -83,7 +83,7 @@ const bamazon = {
     bamazon.queryPromise({
       sql : 'SELECT ?? FROM `products` WHERE ?',
       values : [
-        selectQueryObj.select, selectQueryObj.where || {1:1}
+        selectQueryObj.select, selectQueryObj.where
       ]
     }),
 
@@ -118,6 +118,12 @@ const bamazon = {
     bamazon.query_ProductsSelect({
       select : select,
        where : { toSqlString: () => '`stock_quantity` < 5' }
+    }),
+
+  query_DepartmentsSelectAll: (select = '*') =>
+    bamazon.queryPromise({
+      sql : 'SELECT ?? FROM `departments`',
+      values : [ select ]
     }),
   
   // #endregion Query Promises

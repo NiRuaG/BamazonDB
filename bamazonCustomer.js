@@ -37,8 +37,8 @@ async function afterConnection() {
       bamazon.TBL_CONST.STOCK ], 
     colors.black.bgGreen, colors.green);
 
+  //* PROMPT USER for Product & Quantity
   let theProduct;
-  //*        PROMPT USER for Product & Quantity
   const prodIDInput = (await inquirer.prompt([
     {
       name: "productID",
@@ -48,7 +48,7 @@ async function afterConnection() {
           return true;
         } 
         theProduct = products.find(record => record.item_id === checkID);
-        return (theProduct >=0) || "No product known by that ID.";
+        return (theProduct >= 0) || "No product known by that ID.";
       }
     }
   ])).productID;
@@ -57,8 +57,6 @@ async function afterConnection() {
     return console.log(`\n\tOK.  Order ${colors.red("Exited")}.  Come back again!\n`); 
   }
 
-  //% validation above assures there should be an indexOf (not -1)
-  const theProduct = products[prodIDs.indexOf(Number(prodIDInput))];
   const stockQty = theProduct.stock_quantity;
 
   const qtyInput = (await inquirer.prompt([

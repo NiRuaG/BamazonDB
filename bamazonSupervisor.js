@@ -109,6 +109,8 @@ async function menu_AddToInventory() {
   }
   // console.log(products);
 
+  const prodIDs = products.map(record => record.item_id);
+
   //* PROMPT for Product & Quantity
   let theProduct;
   const prodIDInput = (await inquirer.prompt([
@@ -176,21 +178,6 @@ async function menu_AddToInventory() {
 }
 
 async function menu_AddNewProduct() {
-  //* QUERY - to list all departments
-  let departmentList;
-  try {
-    departmentList = (await bamazon.query_DepartmentsSelectAll(
-      ['department_name']
-    )).results;
-  } catch(error) {
-    if (error.code && error.sqlMessage){
-      return console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
-    }
-    // else
-      throw error;
-  }
-  // console.log(products);
-
   //* PROMPT for New Product Info
   const newProdInput = (await inquirer.prompt([
     {
@@ -225,21 +212,13 @@ async function menu_AddNewProduct() {
     },
     {
       when: curAnswers => curAnswers.name,
-      name: 'department',
-      message: `New Product's ${colors.green('department')}:`,
-      type: 'list',
-      choices: ['test1', 'test2']
-    },
-    {
-      when: curAnswers => curAnswers.name,
       name: 'confirmed',
       type: 'confirm',
       message: currAnswers => {
-        console.log(`\n\tNew ${colors.green(currAnswers.department)} product: ${colors.green(currAnswers.quantity)} units of '${colors.green(currAnswers.name)}'  @ ${colors.green('$'+currAnswers.price.toFixed(2))}\n`);
+        console.log(`\n\t${colors.green(currAnswers.quantity)} units of '${colors.green(currAnswers.name)}'  @ ${colors.green('$'+currAnswers.price.toFixed(2))}\n`);
         return "Is this correct?";
       }
-    },
-    
+    }
   ]));
   // console.log(newProdInput);
   if (!newProdInput.confirmed || !newProdInput.name) {
@@ -272,6 +251,7 @@ async function menu_AddNewProduct() {
   return console.log(`\n\tOK.  Product '${colors.green(newProdInput.name)}', ID ${colors.green('#'+insertedProduct.insertId)}, added\n`);
 }
 // #endregion MENU FUNCTIONS
+
 
 async function afterConnection() {
   console.log(`\n\tWelcome ${colors.green('BAMazon')} Manager!\n`);

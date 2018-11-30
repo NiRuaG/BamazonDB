@@ -7,10 +7,10 @@ CREATE TABLE `departments` (
   `department_id`   INT UNSIGNED NOT NULL AUTO_INCREMENT, 
 
   -- * name of department --
-  `department_name` VARCHAR(32) NOT NULL,
+  `department_name` VARCHAR(32)  NOT NULL,
 
   -- * value of overhead costs --
   `over_head_costs` INT UNSIGNED NOT NULL,
 
-  PRIMARY KEY (`item_id`)
+  PRIMARY KEY (`department_id`)
 );
