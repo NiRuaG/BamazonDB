@@ -30,8 +30,6 @@ async function afterConnection() {
     return console.log(`\n\t${colors.red("Sorry")}, there are no such product results.\n`);
   }
 
-  const prodIDs = products.map(record => record.item_id);
-  
   bamazon.displayTable(products, 
     [ bamazon.TBL_CONST.ID   , 
       bamazon.TBL_CONST.PROD , 
@@ -39,20 +37,24 @@ async function afterConnection() {
       bamazon.TBL_CONST.STOCK ], 
     colors.black.bgGreen, colors.green);
 
+  let theProduct;
   //*        PROMPT USER for Product & Quantity
   const prodIDInput = (await inquirer.prompt([
     {
       name: "productID",
       message: `Please enter the ${colors.green('ID')} of the product you wish to buy (or 'exit')):`,
-      validate: checkID => 
-        checkID.toLowerCase() === "exit" 
-          || prodIDs.includes(+checkID) 
-          || "No product known by that ID."
+      validate: checkID => {
+        if (checkID.toLowerCase() === "exit") {
+          return true;
+        } 
+        theProduct = products.find(record => record.item_id === checkID);
+        return (theProduct >=0) || "No product known by that ID.";
+      }
     }
   ])).productID;
   // console.log(prodIDInput);
   if (prodIDInput === 'exit') {
-    return console.log(`\n\tOK Order ${colors.red("Exited")}.  Come back again!\n`); 
+    return console.log(`\n\tOK.  Order ${colors.red("Exited")}.  Come back again!\n`); 
   }
 
   //% validation above assures there should be an indexOf (not -1)
@@ -68,11 +70,13 @@ async function afterConnection() {
         if (!(Number.isInteger(checkQty) && checkQty >= 0)) {
           return "Quantity needs to be a positive whole number."
         }
+        // else
         if (stockQty < checkQty) {
           return `Not enough in stock. Only ${colors.green(stockQty)} left.`
         }
+        // else
         return true;
-      },
+      }
     }
   ])).quantity;
   // console.log(qtyInput);
@@ -80,6 +84,7 @@ async function afterConnection() {
     return console.log(`\n\tOK.  Order ${colors.red("Cancelled")}.\n`); 
   }
 
+  //% scientific 'e2' (instead of *100) avoids problems with some rounding problems (eg Math.round(1.005 *100)) = 100 not 101
   const totalCost = Math.round((qtyInput * theProduct.price)+'e2')/100;
 
   //*        QUERY - UPDATE SELECTED PRODUCT
@@ -88,8 +93,8 @@ async function afterConnection() {
   try {
     updatedProduct = (await bamazon.query_ProductsUpdate({
       set: {
-        stock_quantity: stockQty - qtyInput,
-        product_sales: theProduct.product_sales + totalCost,
+        stock_quantity : stockQty - qtyInput,
+         product_sales : theProduct.product_sales + totalCost,
       },
       where: {
         item_id: prodIDInput
