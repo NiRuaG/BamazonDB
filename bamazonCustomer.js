@@ -47,8 +47,8 @@ async function afterConnection() {
         if (checkID.toLowerCase() === "exit") {
           return true;
         } 
-        theProduct = products.find(record => record.item_id === Number(checkID));
-        return (theProduct !== undefined) || "No product known by that ID.";
+        theProduct = products.find(record => record.item_id === +checkID);
+        return (!theProduct) || "No product known by that ID.";
       }
     }
   ])).productID;
