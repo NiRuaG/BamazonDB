@@ -14,10 +14,10 @@ Refer to the included `key.js` file and the [dotenv](https://www.npmjs.com/packa
 
 
 ## Customer Interface (`bamazonCustomer.js`)
-1. Customer is presented with a list of products that are in stock, including their ID #s & price.  
+1. Customer is presented with a table of products that are in stock, including ID#s & prices.  
 1. Customer inputs a **product ID** and a **quantity**.  
-1. With valid input, database will update stock quantity and add to the products sales value.  
-1. If order can be fulfilled, message will be displayed with the order's full cost.  
+1. With valid input, database will deplete stock quantity and add to the products sales value.  
+1. If order can be fulfilled, message will be displayed with the order's total cost.  
 
 
 ## Manager Interface (`bamazonManager.js`)

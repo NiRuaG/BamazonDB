@@ -139,6 +139,7 @@ async function menu_AddNewDepartment() {
 }
 // #endregion MENU FUNCTIONS
 
+
 async function afterConnection() {
   console.log(`\n\tWelcome, ${colors.green('BAMazon')} Supervisor!\n`);
 

@@ -1,4 +1,3 @@
-//// const table        = require('table').table;
 const mysql  = require('mysql');
 const table  = require('table').table;
 const colors = require('ansi-colors');
@@ -41,7 +40,7 @@ const bamazon = {
     { field: "profit"     , header: " Profit ", max: '$ 9999999999.99', alignment: 'right', type: {isMoney: true}},
   },
 
-  displayTable(dataRows, columns, headerColor=colors.black.bgGreen, rowStripeColor = colors.green) {
+  displayTable(dataRows, columns, headerColor = colors.black.bgGreen, rowStripeColor = colors.green) {
     //* Table Rows
     let data = dataRows.map((datum, index) => {
         // console.log(datum);
@@ -154,8 +153,8 @@ const bamazon = {
 	       `departments`.`department_id`  , \
 	       `departments`.`department_name`, \
 	       `departments`.`over_head_costs`, \
-         ifnull(SUM(`products`.product_sales),0) AS `total_sales`,            \
-        (ifnull(SUM(`products`.product_sales),0) - over_head_costs) AS profit \
+         ifnull(SUM(`products`.`product_sales`),0) AS `total_sales`,            \
+        (ifnull(SUM(`products`.`product_sales`),0) - over_head_costs) AS profit \
       FROM \
         `departments` LEFT JOIN `products` \
         ON (`departments`.`department_name` = `products`.`department_name`) \

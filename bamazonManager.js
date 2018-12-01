@@ -279,6 +279,7 @@ async function menu_AddNewProduct() {
 }
 // #endregion MENU FUNCTIONS
 
+
 async function afterConnection() {
   console.log(`\n\tWelcome, ${colors.green('BAMazon')} Manager!\n`);
 
