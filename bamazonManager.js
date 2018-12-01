@@ -28,7 +28,7 @@ const MENU_CONST = {
 }
 //#endregion CONSTANTS
 
-// #region MENU FUNCTIONS
+//#region MENU FUNCTIONS
 async function menu_ViewProductsForSale() {
   //* Query
   let products;
@@ -282,8 +282,7 @@ async function menu_AddNewProduct() {
 async function afterConnection() {
   console.log(`\n\tWelcome, ${colors.green('BAMazon')} Manager!\n`);
 
-  //*        PROMPT - Menu Selection
-  // #region PROMPT - Menu Selection
+  //* PROMPT - Menu Selection
   while(true) {
     let menuSelection = (await inquirer.prompt([
       {
@@ -298,7 +297,7 @@ async function afterConnection() {
           new inquirer.Separator(),
           { name: `${Object.keys(MENU_CONST).length+1}. Exit`, value: 'exit' }
         ],
-        message: `Please select from the menu below:`,
+        message: "Please select from the menu below:",
       }
     ])).menuItem;
     // console.log(menuSelection);

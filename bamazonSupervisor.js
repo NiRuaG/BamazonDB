@@ -52,38 +52,6 @@ async function menu_ViewSalesByDepartment() {
   return;
 }
 
-async function menu_ViewLowInventory() {
-  //* Query
-  let products;
-  try {
-    products = (await bamazon.query_ProductsInLowStock(
-      ['item_id', 'product_name', 'price', 'stock_quantity']
-    )).results;
-  } catch(error) {
-    if (error.code && error.sqlMessage) {
-      // console.log(error);
-      return console.log(`Query error: ${error.code}: ${error.sqlMessage}`);
-    }
-    // else
-      throw error;
-  }
-  // console.log(products);
-
-  //* Display Results
-  if (Array.isArray(products) && products.length === 0) {
-    return console.log(`\n\t${colors.red("Sorry")}, there are no such product results.\n`);
-  }
-
-  bamazon.displayTable(products, 
-    [ bamazon.TBL_CONST.ID   , 
-      bamazon.TBL_CONST.PROD , 
-      bamazon.TBL_CONST.PRICE, 
-      bamazon.TBL_CONST.STOCK ], 
-    colors.black.bgRed, colors.redBright);
-
-  return;
-}
-
 async function menu_AddNewDepartment() {
   //* QUERY - to list all departments
   let departmentList;
@@ -171,12 +139,10 @@ async function menu_AddNewDepartment() {
 }
 // #endregion MENU FUNCTIONS
 
-
 async function afterConnection() {
   console.log(`\n\tWelcome, ${colors.green('BAMazon')} Supervisor!\n`);
 
-  //*        PROMPT - Menu Selection
-  // #region PROMPT - Menu Selection
+  //* PROMPT - Menu Selection
   while(true) {
     let menuSelection = (await inquirer.prompt([
       {
