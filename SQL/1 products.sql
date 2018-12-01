@@ -19,7 +19,7 @@ CREATE TABLE `products` (
   `stock_quantity`  INT UNSIGNED NOT NULL,
 
   -- * total sales of this product --
-  `product_sales`   DECIMAL(14,2) NOT NULL DEFAULT 0, 
+  `product_sales`   DECIMAL(12,2) NOT NULL DEFAULT 0, 
 
   PRIMARY KEY (`item_id`)
 );

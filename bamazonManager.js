@@ -52,9 +52,9 @@ async function menu_ViewProductsForSale() {
   }
 
   bamazon.displayTable(products, 
-    [ bamazon.TBL_CONST.ID   , 
-      bamazon.TBL_CONST.PROD , 
-      bamazon.TBL_CONST.PRICE, 
+    [ bamazon.TBL_CONST.PROD_ID, 
+      bamazon.TBL_CONST.PROD   , 
+      bamazon.TBL_CONST.PRICE  , 
       bamazon.TBL_CONST.STOCK ], 
     colors.black.bgGreen, colors.green);
 
@@ -84,9 +84,9 @@ async function menu_ViewLowInventory() {
   }
 
   bamazon.displayTable(products, 
-    [ bamazon.TBL_CONST.ID   , 
-      bamazon.TBL_CONST.PROD , 
-      bamazon.TBL_CONST.PRICE, 
+    [ bamazon.TBL_CONST.PROD_ID, 
+      bamazon.TBL_CONST.PROD   , 
+      bamazon.TBL_CONST.PRICE  , 
       bamazon.TBL_CONST.STOCK ], 
     colors.black.bgRed, colors.redBright);
 
@@ -119,14 +119,14 @@ async function menu_AddToInventory() {
         if (checkID.toLowerCase() === "exit") {
           return true;
         } 
-        theProduct = products.find(record => record.item_id === checkID);
-        return (theProduct >= 0) || "No product known by that ID.";
+        theProduct = products.find(record => record.item_id === Number(checkID));
+        return (theProduct !== undefined) || "No product known by that ID.";
       }
     }
   ])).productID;
   // console.log(prodIDInput);
   if (prodIDInput === 'exit') { 
-    return console.log(`\n\tOK.  Add to Stock ${colors.red("Exited")}\n`); 
+    return console.log(`\n\tOK.  [Add to Inventory] ${colors.red("Exited")}\n`); 
   }
 
   const qtyInput = (await inquirer.prompt([
@@ -141,7 +141,7 @@ async function menu_AddToInventory() {
   ])).quantity;
   // console.log(qtyInput);
   if (qtyInput === 0) { 
-    return console.log(`\n\tOK.  Add to Stock ${colors.red("Cancelled")}.\n`);
+    return console.log(`\n\tOK.  [Add to Inventory] ${colors.red("Cancelled")}.\n`);
   }
 
   //* QUERY - UPDATE Selected Product
@@ -189,7 +189,12 @@ async function menu_AddNewProduct() {
     // else
       throw error;
   }
-  // console.log(products);
+  // console.log(departmentList);
+  
+  if (Array.isArray(departmentList) && departmentList.length === 0) {
+    return console.log(`\n\t${colors.red("Sorry")}, there are no departments available in the database.  Please ${colors.green("contact a Supervisor")}.\n`);
+  }
+  departmentList = departmentList.map(dept => dept.department_name);
 
   //* PROMPT for New Product Info
   const newProdInput = (await inquirer.prompt([
@@ -228,7 +233,7 @@ async function menu_AddNewProduct() {
       name: 'department',
       message: `New Product's ${colors.green('department')}:`,
       type: 'list',
-      choices: ['test1', 'test2']
+      choices: departmentList
     },
     {
       when: curAnswers => curAnswers.name,
@@ -243,7 +248,7 @@ async function menu_AddNewProduct() {
   ]));
   // console.log(newProdInput);
   if (!newProdInput.confirmed || !newProdInput.name) {
-    return console.log(`\n\tOK.  New Product ${colors.red('CANCELLED')}\n`);
+    return console.log(`\n\tOK.  [New Product] ${colors.red('Cancelled')}.\n`);
   }
 
   //* QUERY - INSERT New Product
@@ -253,7 +258,8 @@ async function menu_AddNewProduct() {
       {
           product_name : newProdInput.name    ,
                  price : newProdInput.price   ,
-        stock_quantity : newProdInput.quantity
+        stock_quantity : newProdInput.quantity,
+       department_name : newProdInput.department
      })).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
@@ -269,12 +275,12 @@ async function menu_AddNewProduct() {
   }
 
   //* Completion Message
-  return console.log(`\n\tOK.  Product '${colors.green(newProdInput.name)}', ID ${colors.green('#'+insertedProduct.insertId)}, added\n`);
+  return console.log(`\n\tOK.  Product '${colors.green(newProdInput.name)}', ID ${colors.green('#'+insertedProduct.insertId)}, added.\n`);
 }
 // #endregion MENU FUNCTIONS
 
 async function afterConnection() {
-  console.log(`\n\tWelcome ${colors.green('BAMazon')} Manager!\n`);
+  console.log(`\n\tWelcome, ${colors.green('BAMazon')} Manager!\n`);
 
   //*        PROMPT - Menu Selection
   // #region PROMPT - Menu Selection
@@ -290,7 +296,7 @@ async function afterConnection() {
           MENU_CONST.ADD_STOCK    ,
           MENU_CONST.ADD_PRODUCT  ,
           new inquirer.Separator(),
-          { name: "5. Exit", value: 'exit' }
+          { name: `${Object.keys(MENU_CONST).length+1}. Exit`, value: 'exit' }
         ],
         message: `Please select from the menu below:`,
       }

@@ -10,32 +10,22 @@ const bamazon = require("./bamazon");
 
 //#region CONSTANTS
 const MENU_CONST = {
-  VIEW_PROD: {
-    value: 'VIEW_PROD'    , name: "1. View All Products" , func: menu_ViewProductsForSale
+  VIEW_PROD_SALES: {
+    value: 'VIEW_PROD_SALES', name: "1. View Sales by Department", func: menu_ViewSalesByDepartment
   },
 
-  VIEW_LOWSTOCK: {
-    value: 'VIEW_LOWSTOCK', name: "2. View Low Inventory", func: menu_ViewLowInventory
-  },
-
-  ADD_STOCK: {
-    value: 'ADD_STOCK'    , name: "3. Add to Inventory"  , func: menu_AddToInventory
-  },
-
-  ADD_PRODUCT: {
-    value: 'ADD_PRODUCT'  , name: "4. Add New Product"   , func: menu_AddNewProduct
+  ADD_DEPARTMENT: {
+    value: 'ADD_DEPARTMENT' , name: "2. Create New Department"   , func: menu_AddNewDepartment
   },
 }
 //#endregion CONSTANTS
 
 // #region MENU FUNCTIONS
-async function menu_ViewProductsForSale() {
+async function menu_ViewSalesByDepartment() {
   //* Query
-  let products;
+  let deptProfits;
   try {
-    products = (await bamazon.query_ProductsSelectAll(
-      ['item_id', 'product_name', 'price', 'stock_quantity']
-    )).results;
+    deptProfits = (await bamazon.query_DepartmentsProfits()).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
       // console.log(error);
@@ -44,19 +34,20 @@ async function menu_ViewProductsForSale() {
     // else
       throw error;
   }
-  // console.log(products);
+  // console.log(deptProfits);
 
-  //* Display Results
-  if (Array.isArray(products) && products.length === 0) {
-    return console.log(`\n\t${colors.red("Sorry")}, there are no such product results.\n`);
+  // //* Display Results
+  if (Array.isArray(deptProfits) && deptProfits.length === 0) {
+    return console.log(`\n\t${colors.red("Sorry")}, there are no results.\n`);
   }
 
-  bamazon.displayTable(products, 
-    [ bamazon.TBL_CONST.ID   , 
-      bamazon.TBL_CONST.PROD , 
-      bamazon.TBL_CONST.PRICE, 
-      bamazon.TBL_CONST.STOCK ], 
-    colors.black.bgGreen, colors.green);
+  bamazon.displayTable(deptProfits, 
+    [ bamazon.TBL_CONST.DEPT_ID    , 
+      bamazon.TBL_CONST.DEPT       , 
+      bamazon.TBL_CONST.OVERHEAD   , 
+      bamazon.TBL_CONST.TOTAL_SALES,
+      bamazon.TBL_CONST.PROFITS ], 
+    colors.black.bgBlue, colors.blueBright);
 
   return;
 }
@@ -93,12 +84,12 @@ async function menu_ViewLowInventory() {
   return;
 }
 
-async function menu_AddToInventory() {
-  //* QUERY - SELECT All Products
-  let products;
+async function menu_AddNewDepartment() {
+  //* QUERY - to list all departments
+  let departmentList;
   try {
-    products = (await bamazon.query_ProductsSelectAll(
-      ['item_id', 'product_name', 'stock_quantity']
+    departmentList = (await bamazon.query_DepartmentsSelectAll(
+      ['department_id','department_name']
     )).results;
   } catch(error) {
     if (error.code && error.sqlMessage){
@@ -107,132 +98,60 @@ async function menu_AddToInventory() {
     // else
       throw error;
   }
-  // console.log(products);
-
-  const prodIDs = products.map(record => record.item_id);
-
-  //* PROMPT for Product & Quantity
-  let theProduct;
-  const prodIDInput = (await inquirer.prompt([
-    {
-      name: "productID",
-      message: `Product ${colors.green('ID')} to stock (or 'exit')):`,
-      validate: checkID => {
-        if (checkID.toLowerCase() === "exit") {
-          return true;
-        } 
-        theProduct = products.find(record => record.item_id === checkID);
-        return (theProduct >= 0) || "No product known by that ID.";
-      }
-    }
-  ])).productID;
-  // console.log(prodIDInput);
-  if (prodIDInput === 'exit') { 
-    return console.log(`\n\tOK.  Add to Stock ${colors.red("Exited")}\n`); 
+  // console.log(departmentList);
+  
+  if (Array.isArray(departmentList) && departmentList.length === 0) {
+    console.log(`\n\tThere are currently no departments.`);
+  } else {
+    console.log(`\n\These are the current departments.`);
   }
 
-  const qtyInput = (await inquirer.prompt([
-    {
-      name: "quantity",
-      message: `How ${colors.green('much')} would you like to add to stock (0 to cancel): `,
-      filter: Number, // filter happens before validate 
-      validate: checkQty => 
-        Number.isInteger(checkQty) && checkQty >= 0
-          || "Quantity needs to be a positive whole number."
-    }
-  ])).quantity;
-  // console.log(qtyInput);
-  if (qtyInput === 0) { 
-    return console.log(`\n\tOK.  Add to Stock ${colors.red("Cancelled")}.\n`);
-  }
+  bamazon.displayTable(departmentList, 
+    [ bamazon.TBL_CONST.DEPT_ID, 
+      bamazon.TBL_CONST.DEPT   ],
+    colors.black.bgBlue, colors.blueBright);
 
-  //* QUERY - UPDATE Selected Product
-  let updatedProduct;
-  try {
-    updatedProduct = (await bamazon.query_ProductsUpdate({
-      set: {
-        stock_quantity: theProduct.stock_quantity + qtyInput
-      },
-      where: {
-        item_id: prodIDInput
-      }
-    })).results;
-  } catch(error) {
-    if (error.code && error.sqlMessage) {
-      return console.log(`Update error: ${error.code}: ${error.sqlMessage}`);
-    }
-    // else 
-      throw error;
-  }
-  // console.log(updatedProduct);
-  if (updatedProduct.changedRows === 0) {
-    return console.log(`\n\t${colors.red("Sorry")}, there was a problem stocking the product. ${colors.green("Please try again")}.\n`);
-  }
-  if (updatedProduct.changedRows !== 1) {
-    //! eep. id was not unique!? now multiple rows were added in stock qty
-    return console.error("ERROR: stock update affected multiple items.", updatedProduct);
-  }
-
-  //* Completion Message
-  return console.log(`\n\tOK.  ${colors.green(qtyInput)} units added to Product ${colors.green('#'+prodIDInput)}, '${theProduct.product_name}'\n`);
-}
-
-async function menu_AddNewProduct() {
-  //* PROMPT for New Product Info
-  const newProdInput = (await inquirer.prompt([
+  //* PROMPT for New Department Info
+  const newDeptInfo = (await inquirer.prompt([
     {
       name: 'name',
-      message: `New Product's ${colors.green('name')} (blank will cancel):`,
+      message: `New Department's ${colors.blueBright('name')} (blank will cancel):`,
       filter: input => input.trim(),
     },
     {
       when: curAnswers => curAnswers.name,
-      name: 'price',
-      message: `New Product's ${colors.green('price')}:`,
+      name: 'overhead',
+      message: `New Department's ${colors.blueBright('over head costs')}:`,
       filter: Number, // filter happens before validate
-      validate: checkPrice => {
-        if (!(Number.isInteger(checkPrice*100) && checkPrice > 0)) {
-          return "Price needs to be a positive number (up to 2 digits after decimal).";
+      validate: checkCosts => {
+        if (!(Number.isInteger(checkCosts) && checkCosts >= 0)) {
+          return "Cost should be a positive whole number.";
         }
         return true;
       },
-    },
-    {
-      when: curAnswers => curAnswers.name,
-      name: 'quantity',
-      message: `New Product's initial ${colors.green('quantity')} in stock:`,
-      default: 0,
-      filter: Number,
-      validate: checkQty => {
-        if (!(Number.isInteger(checkQty) && checkQty >= 0)) {
-          return "Quantity needs to be a non-negative whole number."
-        }
-        return true;
-      }
     },
     {
       when: curAnswers => curAnswers.name,
       name: 'confirmed',
       type: 'confirm',
       message: currAnswers => {
-        console.log(`\n\t${colors.green(currAnswers.quantity)} units of '${colors.green(currAnswers.name)}'  @ ${colors.green('$'+currAnswers.price.toFixed(2))}\n`);
+        console.log(`\n\tNew Department '${colors.blueBright(currAnswers.name)}' with over head cost of ${colors.blueBright('$'+currAnswers.overhead)}\n`);
         return "Is this correct?";
       }
     }
   ]));
-  // console.log(newProdInput);
-  if (!newProdInput.confirmed || !newProdInput.name) {
-    return console.log(`\n\tOK.  New Product ${colors.red('CANCELLED')}\n`);
+  // console.log(newDeptInfo);
+  if (!newDeptInfo.confirmed || !newDeptInfo.name) {
+    return console.log(`\n\tOK.  [New Department] ${colors.red('Cancelled')}.\n`);
   }
 
-  //* QUERY - INSERT New Product
-  let insertedProduct;
+  //* QUERY - INSERT New Department
+  let insertedDept;
   try {
-    insertedProduct = (await bamazon.query_ProductsInsert(
+    insertedDept = (await bamazon.query_DepartmentsInsert(
       {
-          product_name : newProdInput.name    ,
-                 price : newProdInput.price   ,
-        stock_quantity : newProdInput.quantity
+        department_name: newDeptInfo.name    ,
+        over_head_costs: newDeptInfo.overhead
      })).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
@@ -241,20 +160,20 @@ async function menu_AddNewProduct() {
     // else 
       throw error;
   }
-  // console.log(insertedProduct);
+  console.log(insertedDept);
 
-  if (insertedProduct.affectedRows === 0) {
-    return console.log(`\n\t${colors.red("Sorry")}, there was a problem adding the product. ${colors.green("Please try again")}.\n`);
+  if (insertedDept.affectedRows === 0) {
+    return console.log(`\n\t${colors.red("Sorry")}, there was a problem adding the department. ${colors.green("Please try again")}.\n`);
   }
 
   //* Completion Message
-  return console.log(`\n\tOK.  Product '${colors.green(newProdInput.name)}', ID ${colors.green('#'+insertedProduct.insertId)}, added\n`);
+  return console.log(`\n\tOK.  Department '${colors.blueBright(newDeptInfo.name)}', ID ${colors.blueBright('#'+insertedDept.insertId)}, added.\n`);
 }
 // #endregion MENU FUNCTIONS
 
 
 async function afterConnection() {
-  console.log(`\n\tWelcome ${colors.green('BAMazon')} Manager!\n`);
+  console.log(`\n\tWelcome, ${colors.green('BAMazon')} Supervisor!\n`);
 
   //*        PROMPT - Menu Selection
   // #region PROMPT - Menu Selection
@@ -264,15 +183,13 @@ async function afterConnection() {
         name: 'menuItem',
         type: 'list',
         choices: [
-          MENU_CONST.VIEW_PROD    ,
-          MENU_CONST.VIEW_LOWSTOCK,
+          MENU_CONST.VIEW_PROD_SALES,
           new inquirer.Separator(),
-          MENU_CONST.ADD_STOCK    ,
-          MENU_CONST.ADD_PRODUCT  ,
+          MENU_CONST.ADD_DEPARTMENT,
           new inquirer.Separator(),
-          { name: "5. Exit", value: 'exit' }
+          { name: `${Object.keys(MENU_CONST).length+1}. Exit`, value: 'exit' }
         ],
-        message: `Please select from the menu below:`,
+        message: "Please select from the menu below:",
       }
     ])).menuItem;
     // console.log(menuSelection);

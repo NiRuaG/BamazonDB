@@ -31,9 +31,9 @@ async function afterConnection() {
   }
 
   bamazon.displayTable(products, 
-    [ bamazon.TBL_CONST.ID   , 
-      bamazon.TBL_CONST.PROD , 
-      bamazon.TBL_CONST.PRICE, 
+    [ bamazon.TBL_CONST.PROD_ID, 
+      bamazon.TBL_CONST.PROD   , 
+      bamazon.TBL_CONST.PRICE  , 
       bamazon.TBL_CONST.STOCK ], 
     colors.black.bgGreen, colors.green);
 
@@ -47,8 +47,8 @@ async function afterConnection() {
         if (checkID.toLowerCase() === "exit") {
           return true;
         } 
-        theProduct = products.find(record => record.item_id === checkID);
-        return (theProduct >= 0) || "No product known by that ID.";
+        theProduct = products.find(record => record.item_id === Number(checkID));
+        return (theProduct !== undefined) || "No product known by that ID.";
       }
     }
   ])).productID;

@@ -18,24 +18,39 @@ const bamazon = {
   }),
 
   TBL_CONST: {
-    ID   : { field: "item_id"       , header: " ID "   , max:  999999    , alignment: 'right' },
-    PRICE: { field: "price"         , header: " Price ", max: '$ 9999.99', alignment: 'right' },
-    STOCK: { field: "stock_quantity", header: " Stock ", max:     999    , alignment: 'right' },
+    PROD_ID:
+    { field: "item_id"       , header: " ID "   , max:  999999    , alignment: 'right' },
+    PRICE:
+    { field: "price"         , header: " Price ", max: '$ 9999.99', alignment: 'right', type: {isMoney: true}},
+    STOCK:
+    { field: "stock_quantity", header: " Stock ", max:     999    , alignment: 'right' },
     
-    DEPT: { field: "department_name", header: "  Dept. "       , width: 20, alignment: 'left', truncate: 64 },
-    PROD: { field:    "product_name", header: "  Product Name ", width: 24, alignment: 'left', truncate: 64 } // wrapWord    : true, //!problem with table package & colors
+    PROD:
+    { field:    "product_name", header: "  Product Name ", width: 24, alignment: 'left', truncate: 64 }, // wrapWord    : true, //!problem with table package & colors
+    DEPT:
+    { field: "department_name", header: "  Department "  , width: 20, alignment: 'left', truncate: 64 },
+
+    DEPT_ID:
+    { field: "department_id"  , header: " ID "      , max:      999 , alignment: 'right' },
+    OVERHEAD:
+    { field: "over_head_costs", header: " Overhead ", max: '$ 99999', alignment: 'right', type: { isMoney:true}},
+
+    TOTAL_SALES:
+    { field: "total_sales", header: " Sales " , max: '$ 9999999999.99', alignment: 'right', type: {isMoney: true}},
+    PROFITS:
+    { field: "profit"     , header: " Profit ", max: '$ 9999999999.99', alignment: 'right', type: {isMoney: true}},
   },
 
-  displayTable(products, columns, headerColor=colors.black.bgGreen, rowStripeColor = colors.green) {
+  displayTable(dataRows, columns, headerColor=colors.black.bgGreen, rowStripeColor = colors.green) {
     //* Table Rows
-    let data = products.map((product, index) => {
-        // console.log(product);
+    let data = dataRows.map((datum, index) => {
+        // console.log(datum);
         let dataRow = columns.map(col => {
-          if (col.field === "price") {
-            return `$ ${product.price.toFixed(2).padStart(bamazon.TBL_CONST.PRICE.width-2)}`;
+          if (col.type && col.type.isMoney) {
+            return `$ ${datum[col.field].toFixed(2).padStart(col.width-2)}`;
           }
           // else 
-            return product[col.field];
+            return datum[col.field];
         });
 
         // apply color to every-other row
@@ -125,7 +140,27 @@ const bamazon = {
       sql : 'SELECT ?? FROM `departments`',
       values : [ select ]
     }),
+
+  query_DepartmentsInsert: insertQueryObj => 
+    bamazon.queryPromise({
+         sql: "INSERT INTO `departments` SET ?",
+      values: [insertQueryObj]
+    }),
   
+  query_DepartmentsProfits: () => 
+    bamazon.queryPromise({
+      sql:
+      "SELECT \
+	       `departments`.`department_id`  , \
+	       `departments`.`department_name`, \
+	       `departments`.`over_head_costs`, \
+         ifnull(SUM(`products`.product_sales),0) AS `total_sales`,            \
+        (ifnull(SUM(`products`.product_sales),0) - over_head_costs) AS profit \
+      FROM \
+        `departments` LEFT JOIN `products` \
+        ON (`departments`.`department_name` = `products`.`department_name`) \
+      GROUP BY `products`.`department_name`"
+    })
   // #endregion Query Promises
 }
 
