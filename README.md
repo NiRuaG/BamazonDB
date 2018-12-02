@@ -2,8 +2,8 @@
 Storefront Database for Customers, Managers, and Supervisors
 
 ## Requirements
-* You will need a running MySQL Database. 
-Refer to the included `key.js` file and the [dotenv](https://www.npmjs.com/package/dotenv) npm documentation. 
+* You will need a running MySQL Database, including user and password info.  
+Refer to the included `key.js` file and the [dotenv](https://www.npmjs.com/package/dotenv) npm documentation.  
 
 ## Setup
 * Included in the repository are `.sql` files to setup the database & tables, including some mock data.
