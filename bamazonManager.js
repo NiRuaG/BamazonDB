@@ -30,6 +30,8 @@ const MENU_CONST = {
 
 //#region MENU FUNCTIONS
 async function menu_ViewProductsForSale() {
+  console.log(`\n\tThese are all products for sale.\n`);
+
   //* Query
   let products;
   try {
@@ -62,6 +64,8 @@ async function menu_ViewProductsForSale() {
 }
 
 async function menu_ViewLowInventory() {
+  console.log(`\n\tThese are products with ${colors.redBright("less than 5")} left in stock.\n`);
+
   //* Query
   let products;
   try {
@@ -120,7 +124,7 @@ async function menu_AddToInventory() {
           return true;
         } 
         theProduct = products.find(record => record.item_id === +checkID);
-        return (!theProduct) || "No product known by that ID.";
+        return (theProduct) || "No product known by that ID.";
       }
     }
   ])).productID;
