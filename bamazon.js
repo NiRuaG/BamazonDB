@@ -153,12 +153,13 @@ const bamazon = {
 	       `departments`.`department_id`  , \
 	       `departments`.`department_name`, \
 	       `departments`.`over_head_costs`, \
-         ifnull(SUM(`products`.`product_sales`),0) AS `total_sales`,            \
-        (ifnull(SUM(`products`.`product_sales`),0) - over_head_costs) AS profit \
+         IFNULL(SUM(`products`.`product_sales`),0) AS `total_sales`,              \
+        (IFNULL(SUM(`products`.`product_sales`),0) - over_head_costs) AS `profit` \
       FROM \
         `departments` LEFT JOIN `products` \
         ON (`departments`.`department_name` = `products`.`department_name`) \
-      GROUP BY `products`.`department_name`"
+      GROUP BY `departments`.`department_name` \
+      ORDER BY `departments`.`department_id`"
     })
   // #endregion Query Promises
 }
