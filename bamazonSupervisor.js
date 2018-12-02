@@ -72,12 +72,11 @@ async function menu_AddNewDepartment() {
     console.log(`\n\tThere are currently no departments.`);
   } else {
     console.log(`\n\These are the current departments.`);
+    bamazon.displayTable(departmentList, 
+      [ bamazon.TBL_CONST.DEPT_ID, 
+        bamazon.TBL_CONST.DEPT   ],
+      colors.black.bgBlue, colors.blueBright);
   }
-
-  bamazon.displayTable(departmentList, 
-    [ bamazon.TBL_CONST.DEPT_ID, 
-      bamazon.TBL_CONST.DEPT   ],
-    colors.black.bgBlue, colors.blueBright);
 
   //* PROMPT for New Department Info
   const newDeptInfo = (await inquirer.prompt([
