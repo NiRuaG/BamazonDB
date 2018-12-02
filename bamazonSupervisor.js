@@ -128,7 +128,7 @@ async function menu_AddNewDepartment() {
     // else 
       throw error;
   }
-  console.log(insertedDept);
+  // console.log(insertedDept);
 
   if (insertedDept.affectedRows === 0) {
     return console.log(`\n\t${colors.red("Sorry")}, there was a problem adding the department. ${colors.green("Please try again")}.\n`);

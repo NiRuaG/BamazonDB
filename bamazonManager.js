@@ -36,7 +36,7 @@ async function menu_ViewProductsForSale() {
   let products;
   try {
     products = (await bamazon.query_ProductsSelectAll(
-      ['item_id', 'product_name', 'price', 'stock_quantity']
+      ['item_id', 'product_name', 'department_name', 'price', 'stock_quantity']
     )).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
@@ -56,6 +56,7 @@ async function menu_ViewProductsForSale() {
   bamazon.displayTable(products, 
     [ bamazon.TBL_CONST.PROD_ID, 
       bamazon.TBL_CONST.PROD   , 
+      bamazon.TBL_CONST.DEPT   , 
       bamazon.TBL_CONST.PRICE  , 
       bamazon.TBL_CONST.STOCK ], 
     colors.black.bgGreen, colors.green);
@@ -64,13 +65,13 @@ async function menu_ViewProductsForSale() {
 }
 
 async function menu_ViewLowInventory() {
-  console.log(`\n\tThese are products with ${colors.redBright("less than 5")} left in stock.\n`);
+  console.log(`\n\tThese are products with ${colors.redBright("less than 5 units left")} in stock.\n`);
 
   //* Query
   let products;
   try {
     products = (await bamazon.query_ProductsInLowStock(
-      ['item_id', 'product_name', 'price', 'stock_quantity']
+      ['item_id', 'product_name', 'department_name', 'price', 'stock_quantity']
     )).results;
   } catch(error) {
     if (error.code && error.sqlMessage) {
@@ -90,6 +91,7 @@ async function menu_ViewLowInventory() {
   bamazon.displayTable(products, 
     [ bamazon.TBL_CONST.PROD_ID, 
       bamazon.TBL_CONST.PROD   , 
+      bamazon.TBL_CONST.DEPT   , 
       bamazon.TBL_CONST.PRICE  , 
       bamazon.TBL_CONST.STOCK ], 
     colors.black.bgRed, colors.redBright);
@@ -124,7 +126,7 @@ async function menu_AddToInventory() {
           return true;
         } 
         theProduct = products.find(record => record.item_id === +checkID);
-        return (theProduct) || "No product known by that ID.";
+        return (!!theProduct) || "No product known by that ID.";
       }
     }
   ])).productID;
@@ -213,7 +215,8 @@ async function menu_AddNewProduct() {
       message: `New Product's ${colors.green('price')}:`,
       filter: Number, // filter happens before validate
       validate: checkPrice => {
-        if (!(Number.isInteger(checkPrice*100) && checkPrice > 0)) {
+        //% scientific 'e2' (instead of *100) avoids problems with some rounding problems (eg Math.isInteger(19.99 *100)) = 1998.999.. (not 1999)
+        if (!(Number.isInteger(+(checkPrice+'e2')) && checkPrice > 0)) {
           return "Price needs to be a positive number (up to 2 digits after decimal).";
         }
         return true;
