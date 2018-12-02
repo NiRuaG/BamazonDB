@@ -198,7 +198,7 @@ async function menu_AddNewProduct() {
   // console.log(departmentList);
   
   if (Array.isArray(departmentList) && departmentList.length === 0) {
-    return console.log(`\n\t${colors.red("Sorry")}, there are no departments available in the database.  Please ${colors.green("contact a Supervisor")}.\n`);
+    return console.log(`\n\t${colors.red("Sorry")}, there are no departments available in the database.\n\tPlease ${colors.green("contact a Supervisor")}.\n`);
   }
   departmentList = departmentList.map(dept => dept.department_name);
 
