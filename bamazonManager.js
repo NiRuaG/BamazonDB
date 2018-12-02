@@ -114,6 +114,9 @@ async function menu_AddToInventory() {
       throw error;
   }
   // console.log(products);
+  if (Array.isArray(products) && products.length === 0) {
+    return console.log(`\n\t${colors.red("Sorry")}, there are no products in the database.\n\tPlease ${colors.green("Add a New Product")} from the menu.\n`);
+  }
 
   //* PROMPT for Product & Quantity
   let theProduct;
