@@ -30,8 +30,8 @@ Refer to the included `key.js` file and the [dotenv](https://www.npmjs.com/packa
 1. Prompts manager for **product's ID** and a **quantity** to add to stock.  
 1. With valid input, database is updated to add inventory.  
 ### `Add New Product`
-1. Prompts manager for new product's `name`, `price`, initial `stock quantity`, and `department` product belongs.  
-1. With valid input, a new product is inserted into database.  
+1. Prompts manager for new product's `name`, `price`, initial `stock quantity`, and the `department` to which the product belongs.  
+1. With valid input, a new product is inserted into the database.  
 
 
 ## Supervisor Interface (`bamazonSupervisor.js`) 
