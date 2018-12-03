@@ -9,11 +9,11 @@ Refer to the included `key.js` file and the [dotenv](https://www.npmjs.com/packa
 * Included in the repository are `.sql` files to setup the database & tables, including some mock data.
 
 ## Demo Videos
-* [DEMO Video 1 of 2](https://drive.google.com/open?id=1r1ySxxurHJ3MIHqnx8JxVikLiMSkTj_W)  
-* [DEMO Video 2 of 2](https://drive.google.com/open?id=1MxrscEutHIL7SUCdmLITeRqiNj4lGz05)
+* [DEMO Video]
 
 
 ## Customer Interface (`bamazonCustomer.js`)
+![](./images/readme-customer.png)  
 1. Customer is presented with a table of products that are in stock, including ID#s & prices.  
 1. Customer inputs a **product ID** and a **quantity**.  
 1. With valid input, database will deplete stock quantity and add to the products sales value.  
@@ -21,6 +21,7 @@ Refer to the included `key.js` file and the [dotenv](https://www.npmjs.com/packa
 
 
 ## Manager Interface (`bamazonManager.js`)
+![](./images/readme-manager.png)  
 *Manager is presented with options menu*
 ### `View All Products`
 1. Displays table of all Products  
@@ -35,6 +36,7 @@ Refer to the included `key.js` file and the [dotenv](https://www.npmjs.com/packa
 
 
 ## Supervisor Interface (`bamazonSupervisor.js`) 
+![](./images/readme-supervisor.png)  
 *Supervisor is presented with options menu*
 ### `View Sales by Department`
 1. Displays table that summarizes the profits (total sales less overhead) of each department.  
