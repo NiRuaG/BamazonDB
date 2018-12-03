@@ -9,7 +9,7 @@ Refer to the included `key.js` file and the [dotenv](https://www.npmjs.com/packa
 * Included in the repository are `.sql` files to setup the database & tables, including some mock data.
 
 ## Demo Videos
-* [DEMO Video]
+* [DEMO Video](https://drive.google.com/file/d/1uwJnm76lLIxTrE5Kofr0gJ43cAxBESUB/view)
 
 
 ## Customer Interface (`bamazonCustomer.js`)
